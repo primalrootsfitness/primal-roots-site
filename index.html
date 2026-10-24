@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20200%20200%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20rx%3D%2240%22%20fill%3D%22%230E0D0B%22/%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23C9A227%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%22100%22%20r%3D%2286%22%20stroke-width%3D%2212%22/%3E%3Cg%20transform%3D%22translate%28100%20104%29%20scale%280.62%29%20translate%28-105%20-120%29%22%20stroke-width%3D%2214%22%3E%3Cpath%20d%3D%22M60%2040%20C60%2064%2058%2080%2052%2094%20C44%20104%2040%20112%2044%20120%20H158%20C168%20120%20170%20110%20162%20106%20C140%20100%20118%2092%20102%2082%20C92%2076%2086%2064%2084%2050%20V40%22/%3E%3C/g%3E%3Cpath%20d%3D%22M34%20104%20H166%22%20stroke%3D%22%23A4471E%22%20stroke-width%3D%229%22/%3E%3Cg%20transform%3D%22translate%28100%20104%29%20scale%280.58%29%20translate%28-100%20-82%29%22%20stroke-width%3D%2215%22%3E%3Cpath%20d%3D%22M100%2082%20V180%22/%3E%3Cpath%20d%3D%22M100%2096%20C86%20112%2066%20120%2044%20126%22/%3E%3Cpath%20d%3D%22M100%2096%20C114%20112%20134%20120%20156%20126%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<meta property="og:title" content="Primal Roots">
+<meta property="og:description" content="In-person men's strength coaching in Bend, Oregon. Built from the ground up.">
+<meta name="theme-color" content="#0E0D0B">
+<title>Primal Roots</title>
+<meta name="description" content="Primal Roots: in-person men's strength coaching in Bend, Oregon. Built from the ground up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one long scroll that reads top-down like a root system: ground line, how we train, pricing, then the ask. */
+:root{
+  --soil:#0E0D0B;
+  --loam:#1a1814;
+  --bone:#F3EEE3;
+  --ash:#a59d8e;
+  --ochre:#C9A227;
+  --rust:#A4471E;
+  --line:#34302a;
+  --display:"Bebas Neue", "Arial Narrow", Impact, sans-serif;
+  --body:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --w:1160px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{background:var(--soil);color:var(--bone);font:400 18px/1.6 var(--body);-webkit-font-smoothing:antialiased;font-synthesis-weight:none}
+h1,h2,h3{letter-spacing:.02em}
+.mark .seal{width:38px;height:38px;flex:0 0 auto}
+.hero .seal{width:min(240px,60vw);height:auto;max-width:100%}
+.foot-mark{display:flex;align-items:center;gap:12px}
+.foot-mark .seal{width:34px;height:34px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--soil)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ochre);outline-offset:3px}
+.wrap{max-width:var(--w);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.label{font:500 12px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ochre)}
+h1,h2,h3{font-family:var(--display);font-weight:900;text-transform:uppercase;line-height:.92;margin:0;text-wrap:balance;letter-spacing:.005em}
+h2{font-size:clamp(40px,6vw,72px)}
+h3{font-size:28px;font-weight:700;line-height:1}
+p{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:700 18px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;padding:16px 26px;border:2px solid var(--ochre);background:var(--ochre);color:var(--soil);transition:background .2s,color .2s}
+.btn:hover{background:transparent;color:var(--ochre)}
+.btn.ghost{background:transparent;color:var(--bone);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--bone)}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--soil) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+.mark{display:flex;align-items:center;gap:10px;font:900 22px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;text-decoration:none}
+nav{display:flex;gap:24px;align-items:center}
+nav a{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ash)}
+nav a:hover{color:var(--bone)}
+nav .btn{padding:10px 16px;font-size:15px}
+@media (max-width:760px){nav a:not(.btn){display:none}}
+
+.hero .wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:end;padding-block:72px 0}
+.hero h1{font-size:clamp(64px,11vw,148px);line-height:.84}
+.hero h1 span{color:var(--ochre)}
+.hero .lede{font-size:21px;max-width:34ch}
+.hero .side{display:grid;gap:24px;padding-bottom:12px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px}
+.ground{margin-top:56px;border-top:2px solid var(--ochre)}
+.roots{display:block;width:100%;height:160px}
+@media (max-width:860px){.hero .wrap{grid-template-columns:1fr;gap:28px;padding-block:48px 0}.roots{height:100px}}
+
+.how{padding-block:40px 96px}
+.how .head{display:grid;gap:16px;margin-bottom:48px;max-width:60ch}
+.how .head p{color:var(--ash)}
+.points{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.points li{padding:28px 28px 8px 0;display:grid;gap:12px;align-content:start;min-width:0}
+.points li + li{padding-left:28px;border-left:1px solid var(--line)}
+.points p{color:var(--ash);font-size:17px}
+.kit{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.kit span{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:9px 12px;color:var(--bone)}
+@media (max-width:860px){.points{grid-template-columns:1fr}.points li,.points li + li{padding:24px 0;border-left:0;border-bottom:1px solid var(--line)}}
+
+.pricing{background:var(--loam);padding-block:96px;border-block:1px solid var(--line)}
+.pricing .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:28px;margin-bottom:40px}
+.pricing .head{display:grid;gap:16px;max-width:56ch}
+.pricing .head p{color:var(--ash)}
+.term{display:grid;gap:10px}
+.seg{display:inline-flex;border:1px solid var(--line);background:var(--soil)}
+.seg button{background:none;border:0;color:var(--ash);font:500 13px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:12px 14px;cursor:pointer;display:grid;gap:5px;text-align:left}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button small{font-size:11px;color:var(--ochre);letter-spacing:.06em}
+.seg button[aria-pressed="true"]{background:var(--ochre);color:var(--soil)}
+.seg button[aria-pressed="true"] small{color:var(--soil)}
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start}
+.tier{border:1px solid var(--line);padding:26px 22px;display:grid;gap:20px;align-content:start;min-width:0;background:var(--soil)}
+.tier.feat{border:2px solid var(--ochre)}
+.tier .tag{justify-self:start;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;background:var(--ochre);color:var(--soil);padding:7px 10px}
+.tier .tag.plain{background:none;color:var(--ash);border:1px solid var(--line)}
+.tier .sub{color:var(--ash);font-size:15px;line-height:1.45}
+.lines{display:grid;gap:0;border-top:1px solid var(--line)}
+.line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.line .what{font-size:15px;color:var(--bone)}
+.line .amt{font:900 30px/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.line .amt small{font:500 12px/1 var(--mono);color:var(--ash);margin-left:4px;letter-spacing:.04em}
+.line.no .what,.line.no .amt{color:var(--ash)}
+.line.no .amt{font:500 13px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.was{display:block;font:500 13px/1.4 var(--mono);color:var(--ash);text-decoration:line-through;text-decoration-color:var(--rust);text-decoration-thickness:2px;text-align:right}
+.save{display:block;margin-top:6px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ochre);text-align:right}
+.tier.feat .save{color:var(--soil);background:var(--ochre);padding:4px 6px;display:inline-block;float:right}
+.only{font:500 12px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ochre)}
+.tier .btn{padding:14px 18px;font-size:16px}
+.alacarte{margin-top:16px;border:1px solid var(--line);background:var(--soil);padding:22px;display:grid;grid-template-columns:auto 1fr 1fr;gap:12px 32px;align-items:center}
+.alacarte .line{border:0;padding:0}
+.alacarte p{color:var(--ash);font-size:15px}
+.fine{margin-top:24px;display:grid;gap:8px;color:var(--ash);font-size:15px;max-width:76ch}
+@media (max-width:1040px){.tiers{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.tiers{grid-template-columns:1fr}.alacarte{grid-template-columns:1fr}.seg button{padding:11px 10px}}
+
+.about{padding-block:96px}
+.about .wrap{display:grid;grid-template-columns:1fr;gap:56px;align-items:start}
+.portrait{width:260px;aspect-ratio:4/5;max-width:100%;background:repeating-linear-gradient(135deg,var(--loam) 0 10px,var(--soil) 10px 20px);border:1px solid var(--line);display:grid;place-items:center;text-align:center;padding:20px}
+.portrait span{font:500 12px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ash)}
+.about .copy{display:grid;gap:20px;max-width:62ch}
+.about .copy p{color:var(--ash)}
+.about .copy p.big{font-size:22px;line-height:1.45;color:var(--bone)}
+@media (max-width:760px){.about .wrap{grid-template-columns:1fr;gap:32px}.portrait{width:100%;aspect-ratio:16/10}}
+
+.book{padding-block:96px 112px;border-top:2px solid var(--ochre)}
+.book .wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:56px;align-items:start}
+.book h2{font-size:clamp(48px,8vw,104px)}
+.book h2 span{color:var(--ochre)}
+.book .copy{display:grid;gap:24px}
+.book .copy p{color:var(--ash);max-width:46ch}
+.contact{border:1px solid var(--line);background:var(--loam);padding:28px;display:grid;gap:22px}
+.contact .item{display:grid;gap:6px}
+.contact .val{font:700 26px/1.1 var(--display);letter-spacing:.03em;user-select:all;word-break:break-word}
+.copybtn{justify-self:start;background:none;border:1px solid var(--line);color:var(--ash);font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:8px 10px;cursor:pointer}
+.copybtn:hover{color:var(--bone);border-color:var(--bone)}
+@media (max-width:860px){.book .wrap{grid-template-columns:1fr;gap:40px}}
+
+footer{border-top:1px solid var(--line);padding-block:28px}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font:500 12px/1.6 var(--mono);color:var(--ash);letter-spacing:.06em}
+footer p{max-width:70ch}
+</style>
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pr-mark" viewBox="0 0 200 200">
+    <g fill="none" stroke="#C9A227" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="100" cy="100" r="92" stroke-width="10"/>
+      <g transform="translate(100 104) scale(0.62) translate(-105 -120)" stroke-width="12">
+        <path d="M60 40 C60 64 58 80 52 94 C44 104 40 112 44 120 H158 C168 120 170 110 162 106 C140 100 118 92 102 82 C92 76 86 64 84 50 V40"/>
+      </g>
+      <path d="M34 104 H166" stroke="#A4471E" stroke-width="7"/>
+      <g transform="translate(100 104) scale(0.58) translate(-100 -82)" stroke-width="13">
+        <path d="M100 82 V180"/>
+        <path d="M100 96 C86 112 66 120 44 126"/>
+        <path d="M100 96 C114 112 134 120 156 126"/>
+        <path d="M100 124 C88 140 72 150 56 162"/>
+        <path d="M100 124 C112 140 128 150 144 162"/>
+      </g>
+    </g>
+  </symbol>
+</svg>
+
+<header>
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Primal Roots home">
+      <svg class="seal" aria-hidden="true"><use href="#pr-mark"/></svg>
+      Primal Roots
+    </a>
+    <nav aria-label="Main">
+      <a href="#how">How we train</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#about">About</a>
+      <a class="btn" href="#book">Book a consult</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <h1>Built from<br><span>the ground up.</span></h1>
+      <div class="side">
+        <svg class="seal" viewBox="0 0 200 200" role="img" aria-label="Primal Roots seal: a bare foot standing on the ground with a deep root system, ringed by the words Primal Roots Fitness, Bend Oregon" fill="none" stroke="#C9A227" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <defs><path id="hero-ring" d="M30 100 A70 70 0 1 1 170 100 A70 70 0 1 1 30 100"/></defs>
+          <circle cx="100" cy="100" r="94"/>
+          <circle cx="100" cy="100" r="58" stroke-width="3"/>
+          <text fill="#C9A227" stroke="none" style="font-family:'Bebas Neue',Impact,sans-serif;font-size:17px;letter-spacing:3px"><textPath href="#hero-ring" textLength="430" lengthAdjust="spacing">PRIMAL ROOTS FITNESS  •  BEND, OREGON  •</textPath></text>
+          <g transform="translate(100 104) scale(0.45) translate(-105 -120)" stroke-width="11">
+            <path d="M60 40 C60 64 58 80 52 94 C44 104 40 112 44 120 H158 C168 120 170 110 162 106 C140 100 118 92 102 82 C92 76 86 64 84 50 V40"/>
+            <path d="M104 104 C116 106 128 108 140 110" stroke-width="7"/>
+          </g>
+          <path d="M52 104 H148" stroke="#A4471E" stroke-width="4.5"/>
+          <g transform="translate(100 104) scale(0.42) translate(-100 -82)" stroke-width="12">
+            <path d="M100 82 V190"/>
+            <path d="M100 96 C86 112 66 120 44 126"/>
+            <path d="M100 96 C114 112 134 120 156 126"/>
+            <path d="M100 120 C88 138 70 150 52 166"/>
+            <path d="M100 120 C112 138 130 150 148 166"/>
+            <path d="M100 150 C92 162 82 172 72 184"/>
+            <path d="M100 150 C108 162 118 172 128 184"/>
+            <path d="M66 118 C60 128 56 138 50 146" stroke-width="8"/>
+            <path d="M134 118 C140 128 144 138 150 146" stroke-width="8"/>
+          </g>
+        </svg>
+        <p class="label">In-person coaching · Bend, Oregon</p>
+        <p class="lede">One-on-one strength coaching for men. We start at your feet and build up, with kettlebells and real-world movement instead of machines and mirrors.</p>
+        <div class="ctas">
+          <a class="btn" href="#book">Book a free consult</a>
+          <a class="btn ghost" href="#pricing">See pricing</a>
+        </div>
+      </div>
+    </div>
+    <div class="ground" aria-hidden="true">
+      <svg class="roots" viewBox="0 0 1200 160" preserveAspectRatio="none" fill="none">
+        <g stroke="#34302a" stroke-width="2">
+          <path d="M600 0 C600 45 520 65 430 100 S260 145 140 158"/>
+          <path d="M600 0 C600 45 680 65 770 100 S940 145 1060 158"/>
+          <path d="M600 0 C595 55 560 100 520 160"/>
+          <path d="M600 0 C605 55 640 100 680 160"/>
+          <path d="M430 100 C400 125 360 135 320 160"/>
+          <path d="M770 100 C800 125 840 135 880 160"/>
+        </g>
+        <path d="M600 0 C600 60 600 110 600 160" stroke="#A4471E" stroke-width="3"/>
+      </svg>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="head">
+        <p class="label">How we train</p>
+        <h2>Start at the feet</h2>
+        <p>Training is private and in person, in a home gym in Bend. We start every session at the foundation and work our way up.</p>
+      </div>
+      <ul class="points">
+        <li>
+          <h3>Feet first</h3>
+          <p>Your feet are where every movement starts. We build strength and control there before we load anything heavy.</p>
+        </li>
+        <li>
+          <h3>Fascial lines</h3>
+          <p>Your body works as connected chains, not isolated muscles. We train movements that link them together, through rotation, reach and stride.</p>
+        </li>
+        <li>
+          <h3>Kettlebell strength</h3>
+          <p>No barbell bench, squat or deadlift days. Strength work is built on kettlebells, maces, landmine and cables.</p>
+          <div class="kit" aria-label="Equipment">
+            <span>Kettlebells 5–60 lb</span><span>Macebells</span><span>Landmine</span><span>Med balls</span><span>Cables</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <div class="wrap">
+      <div class="top">
+        <div class="head">
+          <p class="label">Pricing</p>
+          <h2>Pick your plan</h2>
+          <p>All plans are month to month. Commit to 6 or 12 months and save at checkout.</p>
+        </div>
+        <div class="term">
+          <span class="label" id="termLabel">Show prices for</span>
+          <div class="seg" role="group" aria-labelledby="termLabel">
+            <button type="button" id="t1" data-off="0" aria-pressed="true">Month to month<small>Standard rate</small></button>
+            <button type="button" id="t6" data-off="10" aria-pressed="false">6 months<small>Save 10%</small></button>
+            <button type="button" id="t12" data-off="15" aria-pressed="false">12 months<small>Save 15%</small></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tiers">
+        <article class="tier">
+          <span class="tag plain">Coaching only</span>
+          <h3>Coaching</h3>
+          <p class="sub">In-person sessions with me. That's it: no workout plan for the rest of the week and no nutrition plan.</p>
+          <div class="lines">
+            <div class="line"><span class="what">Per session</span><span class="amt" data-base="160"></span></div>
+            <div class="line no"><span class="what">Workout plan</span><span class="amt">Not included</span></div>
+            <div class="line no"><span class="what">Nutrition plan</span><span class="amt">Not included</span></div>
+          </div>
+          <a class="btn ghost" href="#book">Book a consult</a>
+        </article>
+
+        <article class="tier">
+          <span class="tag plain">Coaching + training</span>
+          <h3>Coaching + Workout Plan</h3>
+          <p class="sub">Sessions with me, plus a written plan for the days you train on your own.</p>
+          <div class="lines">
+            <div class="line"><span class="what">Per session</span><span class="amt" data-base="120" data-orig="160"></span></div>
+            <div class="line"><span class="what">Workout plan</span><span class="amt" data-base="150" data-orig="200" data-mo></span></div>
+            <div class="line no"><span class="what">Nutrition plan</span><span class="amt">Not included</span></div>
+          </div>
+          <a class="btn ghost" href="#book">Book a consult</a>
+        </article>
+
+        <article class="tier">
+          <span class="tag plain">Coaching + nutrition</span>
+          <h3>Coaching + Nutrition Plan</h3>
+          <p class="sub">Sessions with me, plus a nutrition plan built around whole, real food.</p>
+          <div class="lines">
+            <div class="line"><span class="what">Per session</span><span class="amt" data-base="120" data-orig="160"></span></div>
+            <div class="line no"><span class="what">Workout plan</span><span class="amt">Not included</span></div>
+            <div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="150" data-orig="200" data-mo></span></div>
+          </div>
+          <a class="btn ghost" href="#book">Book a consult</a>
+        </article>
+
+        <article class="tier feat">
+          <span class="tag">Best value</span>
+          <h3>The Full Root</h3>
+          <p class="sub">Everything: sessions, a workout plan and a nutrition plan, at the lowest rate on each.</p>
+          <div class="lines">
+            <div class="line"><span class="what">Per session</span><span class="amt" data-base="95" data-orig="160"></span></div>
+            <div class="line"><span class="what">Workout plan</span><span class="amt" data-base="100" data-orig="200" data-mo></span></div>
+            <div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="100" data-orig="200" data-mo></span></div>
+          </div>
+          <a class="btn" href="#book">Book a consult</a>
+        </article>
+      </div>
+
+      <div class="alacarte">
+        <span class="only">Plans on their own<br>(no sessions)</span>
+        <div class="line"><span class="what">Workout plan</span><span class="amt" data-base="200" data-mo></span></div>
+        <div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="200" data-mo></span></div>
+      </div>
+
+      <div class="fine">
+        <p>Plan prices are per month. The 6-month (10% off) and 12-month (15% off) rates apply when you pay for the full term up front at checkout.</p>
+        <p>Nutrition coaching covers food habits and general guidance. It isn't medical nutrition therapy, and anyone with a medical condition should work with their doctor alongside coaching.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="wrap">
+      <div class="copy">
+        <p class="label">Your coach</p>
+        <h2>Wade Peterson</h2>
+        <p class="big">Born and raised in Bend. I came to this work through my own health, after changing how I ate, moved and lived and feeling the difference in everything.</p>
+        <p>I've worked farms, landscaping crews and delivery routes, so I know what a hard-working life does to a body. Now I coach men who want to feel strong and capable again, starting from the ground up.</p>
+        <div class="kit">
+          <span>NCSF Certified Personal Trainer</span><span>Bend, Oregon native</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="book" id="book">
+    <div class="wrap">
+      <div class="copy">
+        <p class="label">Get started</p>
+        <h2>Start with a <span>free consult.</span></h2>
+        <p>30 minutes to talk through where you are, what you want, and which plan fits. No pressure and no pitch.</p>
+        <div class="ctas">
+          <a class="btn" id="bookingLink" href="#book">Book a free consult</a>
+        </div>
+      </div>
+      <aside class="contact" aria-label="Contact">
+        <div class="item">
+          <span class="label">Call or text</span>
+          <span class="val" id="phone">541-280-4390</span>
+          <button class="copybtn" type="button" data-copy="phone">Copy number</button>
+        </div>
+        <div class="item">
+          <span class="label">Email</span>
+          <span class="val" id="email">wade@primalroots.fit</span>
+          <button class="copybtn" type="button" data-copy="email">Copy email</button>
+        </div>
+        <div class="item">
+          <span class="label">Location</span>
+          <span class="val">Bend, Oregon</span>
+          <p style="color:var(--ash);font-size:15px">Private home gym. Address shared after booking.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="foot-mark"><svg class="seal" aria-hidden="true"><use href="#pr-mark"/></svg>© 2026 Primal Roots · Bend, Oregon</span>
+    <p>Coaching is not medical care. Clients complete a health screen before training, and anyone with pain, injury or a medical condition should get clearance from their healthcare provider.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var amts=document.querySelectorAll('.amt[data-base]');
+  function fmt(n){return '$'+(Math.round(n*100)%100?n.toFixed(2):String(Math.round(n)))}
+  function render(off){
+    amts.forEach(function(el){
+      var base=+el.dataset.base,price=Math.floor(base*(1-off/100)+1e-9),unit=el.hasAttribute('data-mo')?'/ mo':'';
+      var was=el.dataset.orig?+el.dataset.orig:base,saved=was-price;
+      el.innerHTML=(saved>0.005?'<span class="was">'+fmt(was)+'</span>':'')+fmt(price)+(unit?'<small>'+unit+'</small>':'')+(saved>0.005?'<span class="save">Save '+fmt(saved)+(unit?' / mo':' / session')+'</span>':'');
+    });
+  }
+  var btns=document.querySelectorAll('.seg button');
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    render(+b.dataset.off);
+  })});
+  render(0);
+
+  document.querySelectorAll('[data-copy]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var el=document.getElementById(btn.dataset.copy),txt=el.textContent.trim(),orig=btn.textContent;
+      function done(){btn.textContent='Copied';setTimeout(function(){btn.textContent=orig},1600)}
+      function fallback(){var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='Selected';setTimeout(function(){btn.textContent=orig},1600)}
+      try{navigator.clipboard.writeText(txt).then(done,fallback)}catch(e){fallback()}
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

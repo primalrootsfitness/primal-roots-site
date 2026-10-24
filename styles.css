@@ -176,3 +176,21 @@ footer .fm{display:flex;align-items:center;gap:10px}
 footer .fm svg{width:28px;height:28px}
 footer nav{gap:16px;flex-wrap:wrap;width:auto;overflow:visible}
 footer p{max-width:62ch}
+
+/* pricing v2 */
+.tiers.three{grid-template-columns:repeat(3,1fr);gap:16px}
+.rates{display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--ink)}
+.rate{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:baseline;padding:18px 24px 18px 0;min-width:0}
+.rate + .rate{padding-left:24px;border-left:1px solid var(--rule)}
+.rate .what{font-size:16px;font-weight:600}
+.rate p{grid-column:1 / -1;color:var(--stone);font-size:15px}
+.incl{list-style:none;margin:0;padding:0;display:grid;gap:8px;border-top:1px solid var(--rule);padding-top:14px}
+.incl li{display:grid;grid-template-columns:16px 1fr;gap:8px;font-size:15px}
+.incl li::before{content:"";width:8px;height:8px;margin-top:8px;background:var(--rust)}
+.tier.custom{background:var(--mist)}
+.tier.custom .incl li::before{background:var(--stone)}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:12px 0}
+.total .what{font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--stone)}
+.total .amt{font-size:36px}
+.tier.feat .total .save{display:table;margin-left:auto;background:var(--rust);color:var(--paper);padding:4px 6px}
+@media (max-width:900px){.tiers.three{grid-template-columns:1fr}.rates{grid-template-columns:1fr}.rate,.rate + .rate{padding:16px 0;border-left:0;border-bottom:1px solid var(--rule)}}

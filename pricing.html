@@ -15,13 +15,15 @@
 <body>
 <header><div class="wrap">
 <a class="mark" href="index.html"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke="#15130F" stroke-linecap="round" stroke-linejoin="round"><circle cx="100" cy="100" r="92" stroke-width="10"/><g transform="translate(100 104) scale(0.62) translate(-105 -120)" stroke-width="12"><path d="M60 40 C60 64 58 80 52 94 C44 104 40 112 44 120 H158 C168 120 170 110 162 106 C140 100 118 92 102 82 C92 76 86 64 84 50 V40"/></g><path d="M34 104 H166" stroke="#A4471E" stroke-width="7"/><g transform="translate(100 104) scale(0.58) translate(-100 -82)" stroke-width="13"><path d="M100 82 V180"/><path d="M100 96 C86 112 66 120 44 126"/><path d="M100 96 C114 112 134 120 156 126"/><path d="M100 124 C88 140 72 150 56 162"/><path d="M100 124 C112 140 128 150 144 162"/></g></g></svg>Primal Roots</a>
-<nav aria-label="Main"><a href="index.html">Home</a><a href="training.html">Training</a><a href="pricing.html" aria-current="page">Pricing</a><a href="about.html">About</a><a class="btn" href="book.html">Book a consult</a></nav>
+<nav aria-label="Main"><a href="index.html">Home</a><a href="training.html">Training</a><a href="pricing.html" aria-current="page">Pricing</a><a href="about.html">About</a><a class="btn" href="book.html">Book a call</a></nav>
 </div></header>
 <main>
-<section class="intro"><div class="wrap"><p class="label">Pricing</p><h1>Pick your plan</h1>
-<p class="lede">All plans are month to month. Pay with cash or bank transfer and save 5%, or prepay 3 or 6 months and save more.</p></div></section>
+<section class="intro"><div class="wrap"><p class="label">Pricing</p><h1>Bundle and save</h1>
+<p class="lede">Every plan is built around you. These are my standard rates and two example bundles. We'll put together your exact plan at your in-person consult.</p></div></section>
+
 <section class="section"><div class="wrap">
-<div class="ptop"><span></span>
+<div class="ptop">
+<div class="head" style="margin:0"><p class="label">Standard rates</p><h2>Pay as you go</h2></div>
 <div class="term"><span class="label" id="termLabel">Show prices for</span>
 <div class="seg" role="group" aria-labelledby="termLabel">
 <button type="button" id="t1" data-off="0" aria-pressed="true">Month to month<small>Standard rate</small></button>
@@ -29,25 +31,49 @@
 <button type="button" id="t3" data-off="10" aria-pressed="false">3 months<small>Save 10%</small></button>
 <button type="button" id="t6" data-off="15" aria-pressed="false">6 months<small>Save 15%</small></button>
 </div></div></div>
-<div class="tiers">
-<article class="tier feat"><span class="tag">Recommended · Best value</span><h3>The Full Root</h3><p class="sub">Everything: sessions, a workout plan and a nutrition plan, at the lowest rate on each.</p>
-<div class="lines"><div class="line"><span class="what">Per session</span><span class="amt" data-base="95" data-orig="160"></span></div><div class="line"><span class="what">Workout plan</span><span class="amt" data-base="100" data-orig="200" data-mo></span></div><div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="100" data-orig="200" data-mo></span></div></div><a class="btn" href="book.html">Book a consult</a></article>
-<article class="tier"><span class="tag">Coaching only</span><h3>Coaching</h3><p class="sub">In-person sessions with me. That's it: no workout plan for the rest of the week and no nutrition plan.</p>
-<div class="lines"><div class="line"><span class="what">Per session</span><span class="amt" data-base="160"></span></div><div class="line no"><span class="what">Workout plan</span><span class="amt">Not included</span></div><div class="line no"><span class="what">Nutrition plan</span><span class="amt">Not included</span></div></div><a class="btn ghost" href="book.html">Book a consult</a></article>
-<article class="tier"><span class="tag">Coaching + training</span><h3>Coaching + Workout Plan</h3><p class="sub">Sessions with me, plus a written plan for the days you train on your own.</p>
-<div class="lines"><div class="line"><span class="what">Per session</span><span class="amt" data-base="120" data-orig="160"></span></div><div class="line"><span class="what">Workout plan</span><span class="amt" data-base="150" data-orig="200" data-mo></span></div><div class="line no"><span class="what">Nutrition plan</span><span class="amt">Not included</span></div></div><a class="btn ghost" href="book.html">Book a consult</a></article>
-<article class="tier"><span class="tag">Coaching + nutrition</span><h3>Coaching + Nutrition Plan</h3><p class="sub">Sessions with me, plus a nutrition plan built around whole, real food.</p>
-<div class="lines"><div class="line"><span class="what">Per session</span><span class="amt" data-base="120" data-orig="160"></span></div><div class="line no"><span class="what">Workout plan</span><span class="amt">Not included</span></div><div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="150" data-orig="200" data-mo></span></div></div><a class="btn ghost" href="book.html">Book a consult</a></article>
+
+<div class="rates">
+<div class="rate"><span class="what">In-person session</span><span class="amt" data-base="160"></span><p>One hour, one-on-one coaching.</p></div>
+<div class="rate"><span class="what">Workout plan</span><span class="amt" data-base="150" data-mo></span><p>A written plan for the days you train on your own.</p></div>
+<div class="rate"><span class="what">Nutrition plan</span><span class="amt" data-base="150" data-mo></span><p>Food guidelines built around whole, real food.</p></div>
 </div>
-<div class="alacarte"><span class="only">Plans on their own<br>(no sessions)</span><div class="line"><span class="what">Workout plan</span><span class="amt" data-base="200" data-mo></span></div><div class="line"><span class="what">Nutrition plan</span><span class="amt" data-base="200" data-mo></span></div></div>
+
+<div class="head" style="margin-top:56px"><p class="label">Bundle and save</p><h2>Example bundles</h2>
+<p>Put sessions and plans together and the price drops. These are examples; your bundle is built at your consult.</p></div>
+<div class="tiers three">
+<article class="tier feat"><span class="tag">Recommended · Best value</span><h3>The Full Root</h3><p class="sub">Train with me twice a week, with both plans for the days in between.</p>
+<ul class="incl"><li>8 in-person sessions a month (2x / week)</li><li>Workout plan</li><li>Nutrition plan</li></ul>
+<div class="total"><span class="what">Per month</span><span class="amt" data-base="920" data-orig="1580" data-mo></span></div>
+<a class="btn" href="book.html">Book a free call</a></article>
+
+<article class="tier"><span class="tag">Once a week</span><h3>The Root</h3><p class="sub">One session a week to stay on track, with both plans to carry you through the week.</p>
+<ul class="incl"><li>4 in-person sessions a month (1x / week)</li><li>Workout plan</li><li>Nutrition plan</li></ul>
+<div class="total"><span class="what">Per month</span><span class="amt" data-base="560" data-orig="940" data-mo></span></div>
+<a class="btn ghost" href="book.html">Book a free call</a></article>
+
+<article class="tier custom"><span class="tag">Your plan</span><h3>Build your own</h3><p class="sub">Want something different? We can build it. For example:</p>
+<ul class="incl"><li>2x a week in person for 3 months, workout plan only</li><li>1x a week plus nutrition coaching</li><li>Just a workout plan to follow on your own</li></ul>
+<p class="sub">Bundles of sessions and plans always cost less than standard rates. We'll price yours at your consult.</p>
+<a class="btn ghost" href="book.html">Book a free call</a></article>
+</div>
+
 <div class="fine">
-<p>Plan prices are per month. Standard rates apply to card payments. Pay with cash or bank transfer (Zelle or ACH) and save 5% month to month. Prepay 3 months up front in cash or bank transfer and save 10%, or 6 months and save 15%.</p>
+<p>Standard rates apply to card payments. Pay with cash or bank transfer (Zelle or ACH) and save 5% month to month. Prepay 3 months up front in cash or bank transfer and save 10%, or 6 months and save 15%.</p>
 <p>Nutrition coaching covers food habits and general guidance. It isn't medical nutrition therapy, and anyone with a medical condition should work with their doctor alongside coaching.</p>
 </div>
 </div></section>
+
+<section class="section tint"><div class="wrap">
+<div class="head"><p class="label">How it works</p><h2>From first call to first session</h2></div>
+<ol class="steps">
+<li><div><b>Free 15-minute phone call</b><p>Ask me anything. We'll talk about what you're after and whether we're a good fit.</p></div></li>
+<li><div><b>30-minute in-person consult</b><p>At the gym. We fill out a health screen and waiver, go over your goals, do a few basic movement checks, and build your plan and price together.</p></div></li>
+<li><div><b>Start training</b><p>Pick your start date and we get to work.</p></div></li>
+</ol>
+</div></section>
 <section class="band"><div class="wrap">
-<div><h2>Start with a <span>free consult.</span></h2><p>30 minutes to talk through where you are, what you want, and which plan fits.</p></div>
-<a class="btn" href="https://calendar.app.google/MXGP5ihnuN8vnBzv5" target="_blank" rel="noopener">Book a free consult</a>
+<div><h2>Start with a <span>free call.</span></h2><p>15 minutes on the phone to ask questions and see if we're a good fit.</p></div>
+<a class="btn" href="https://calendar.app.google/MXGP5ihnuN8vnBzv5" target="_blank" rel="noopener">Book a free call</a>
 </div></section>
 </main>
 <footer><div class="wrap">

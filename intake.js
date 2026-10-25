@@ -1,6 +1,6 @@
 /* Primal Roots intake form. Submissions go to a Google Apps Script web app that saves a PDF to Drive and emails it. */
 (function () {
-  var ENDPOINT = ''; // Google Apps Script web app URL, set after setup
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbzJ8XXeBXqE8PCG6k2Ytm6TsS_Jnh88CuYnfTv53w9aW-g5kysi2GxMZOEUKf8kNv6wLQ/exec';
   var LLC_NAME = '[LLC legal name]';
   var STORE = 'pr-intake-draft-v1';
 

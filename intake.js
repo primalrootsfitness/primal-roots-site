@@ -283,6 +283,8 @@
     if (f.type === 'grid') { v = v || []; for (var i = 0; i < f.rows.length; i++) if (!v[i]) return true; return false; }
     if (f.type === 'check') return !v;
     if (f.type === 'checks') return !(v && v.length);
+    if (f.input === 'email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v).trim())) return true;
+    if (f.input === 'tel' && v && String(v).replace(/\D/g, '').length < 10) return true;
     return !v || !String(v).trim();
   }
   function validate() {
@@ -290,7 +292,7 @@
     root.querySelectorAll('.bad').forEach(function (x) { x.classList.remove('bad'); });
     if (!bad.length) { err.hidden = true; return true; }
     bad.forEach(function (f) { var el = root.querySelector('[data-id="' + f.id + '"],[data-grid="' + f.id + '"],[data-sig="' + f.id + '"]'); if (el) { var box = el.closest('.fld,.grid,.attest,.sigwrap') || el; box.classList.add('bad'); } });
-    err.textContent = 'Please complete the highlighted ' + (bad.length === 1 ? 'question' : bad.length + ' questions') + ' before continuing.';
+    err.textContent = (bad.some(function (f) { return f.input === 'email' || f.input === 'tel'; }) ? 'Check that your email and phone number are entered correctly. ' : '') + 'Please complete the highlighted ' + (bad.length === 1 ? 'question' : bad.length + ' questions') + ' before continuing.';
     err.hidden = false;
     var first = root.querySelector('.bad'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;

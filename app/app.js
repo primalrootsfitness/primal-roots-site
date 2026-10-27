@@ -26,7 +26,7 @@
   var USED = ['Attended', 'Late cancel', 'No-show'];
 
   var S = { loading: true, tab: 'today', sub: null, toast: null, data: {} };
-  function toast(t) { S.toast = t; draw(); clearTimeout(toast._t); toast._t = setTimeout(function () { S.toast = null; draw(); }, 2200); }
+  function toast(t) { draw(); toastLite(t); }
   function fail(e) { console.error(e); toast((e && e.message) ? 'Error: ' + e.message : 'Something went wrong. Try again.'); }
   function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
   function checked(id) { var el = document.getElementById(id); return !!(el && el.checked); }
@@ -112,8 +112,10 @@
       q(sb.from('payments').select('*').eq('client_id', cid).eq('month', MONTH)),
       q(sb.from('documents').select('*').eq('client_id', cid).order('signed_on', { ascending: false })),
       q(sb.from('workout_completions').select('*').eq('client_id', cid).gte('completed_at', weekStart().toISOString())),
-      q(sb.from('set_logs').select('*').eq('client_id', cid).eq('logged_on', TODAY))
+      q(sb.from('set_logs').select('*').eq('client_id', cid).eq('logged_on', TODAY)),
+      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; })
     ]);
+    D.guide = res[11];
     D.program = res[0][0] || null; D.checkins = res[1]; D.nutrition = res[2]; D.food = res[3]; D.water = res[4] ? res[4].glasses : 0;
     D.messages = res[5]; D.sessions = res[6]; D.payments = res[7]; D.documents = res[8]; D.completions = res[9];
     D.logs = {}; res[10].forEach(function (l) { D.logs[l.exercise_id + '_' + l.set_number] = l; });
@@ -209,16 +211,20 @@
       '<button class="btn block" data-act="saveck">Save check-in</button>';
   }
   function clientFood() {
-    var D = S.data, n = D.nutrition;
-    var plan = n ? '<div><p class="label">Nutrition plan</p><h2>' + esc(n.title || 'Your nutrition plan') + '</h2>' + (n.summary ? '<p class="muted small">' + esc(n.summary) + '</p>' : '') + '</div>' +
-      ((n.guidelines || []).length ? '<div class="card"><p class="label">Your guidelines</p><ul style="margin:0;padding-left:18px">' + n.guidelines.map(function (g) { return '<li style="margin-bottom:6px">' + esc(g) + '</li>'; }).join('') + '</ul></div>' : '') +
-      ((n.sample_day || []).length ? '<div class="card"><p class="label">Sample day</p>' + n.sample_day.map(function (m) { return '<div class="row small"><b>' + esc(m.meal) + '</b><span class="muted" style="text-align:right">' + esc(m.food) + '</span></div>'; }).join('') + '</div>' : '')
-      : (D.client.nutrition_plan ? '<div><p class="label">Nutrition plan</p><h2>Coming soon</h2></div><div class="empty">' + COACH.name + ' is putting your nutrition plan together.</div>' : '<div><p class="label">Food</p><h2>Food log</h2></div>');
-    return plan +
-      '<div class="row"><h3>Today\'s food log</h3><button class="btn ghost mini" data-go="addfood">+ Add</button></div>' +
-      '<div class="list">' + (D.food.length ? D.food.map(function (f) { return '<div class="meal"><span class="when">' + esc(f.meal || '') + '</span><span>' + esc(f.description) + '</span><span class="muted small">' + esc(fmtTime(f.logged_at)) + '</span></div>'; }).join('') : '<p class="muted small" style="padding:12px 0">Nothing logged yet today.</p>') + '</div>' +
+    var D = S.data, g = D.guide, n = D.nutrition, days = (g && g.days) || [];
+    var di = S.mealDay != null ? S.mealDay : (NOW.getDay() + 6) % 7; if (di >= days.length) di = 0;
+    var day = days[di];
+    var personal = n && ((n.guidelines || []).length || n.summary) ? '<div class="card dark"><p class="label">Notes from ' + COACH.name + '</p>' + (n.summary ? '<p>' + esc(n.summary) + '</p>' : '') + ((n.guidelines || []).length ? '<ul style="margin:0;padding-left:18px">' + n.guidelines.map(function (x) { return '<li style="margin-bottom:6px">' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' : '';
+    var guide = g ? '<div><p class="label">Food</p><h2>Meal guide</h2>' + (g.intro ? '<p class="muted small">' + esc(g.intro) + '</p>' : '') + '</div>' + personal +
+      (days.length ? '<div class="cats" role="group" aria-label="Example days">' + days.map(function (d, i) { return '<button class="chip' + (i === di ? ' on' : '') + '" data-act="mealday" data-v="' + i + '">' + esc(d.name || 'Day ' + (i + 1)) + '</button>'; }).join('') + '</div>' +
+        '<div class="meals">' + (day.meals || []).map(function (m) { return '<div class="mealcard"><p class="label">' + esc(m.meal) + '</p><h3>' + esc(m.idea) + '</h3>' + (m.tip ? '<p class="small muted">' + esc(m.tip) + '</p>' : '') + '</div>'; }).join('') + '</div>' : '') +
+      ((g.guidelines || []).length ? '<div class="card"><p class="label">Guidelines</p><ul style="margin:0;padding-left:18px">' + g.guidelines.map(function (x) { return '<li style="margin-bottom:6px">' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '')
+      : '<div><p class="label">Food</p><h2>Meal guide</h2></div>' + personal + '<div class="empty">' + COACH.name + ' is putting your meal guide together.</div>';
+    return guide +
+      '<div class="row" style="margin-top:6px"><h3>Track today</h3><button class="btn ghost mini" data-go="addfood">+ Log a meal</button></div>' +
+      (D.food.length ? '<div class="list">' + D.food.map(function (f) { return '<div class="meal"><span class="when">' + esc(f.meal || '') + '</span><span>' + esc(f.description) + '</span><span class="muted small">' + esc(fmtTime(f.logged_at)) + '</span></div>'; }).join('') + '</div>' : '<p class="muted small">Logging meals is optional, but it helps ' + COACH.name + ' coach you.</p>') +
       '<div class="card"><div class="row"><p class="label">Water</p><span class="muted small">' + D.water + ' of 8 glasses</span></div><div class="bar"><i style="width:' + Math.min(100, D.water / 8 * 100) + '%"></i></div><div class="row"><button class="btn ghost mini" data-act="water" data-d="-1">−</button><button class="btn mini" data-act="water" data-d="1">+ Glass</button></div></div>' +
-      '<p class="muted small">Nutrition coaching is general guidance, not medical nutrition therapy. Check with your doctor if you have a medical condition.</p>';
+      '<p class="muted small">These are general food ideas, not medical nutrition therapy. If you have a medical condition, food allergies or take medication, check with your doctor.</p>';
   }
   function addFood() {
     return '<div><p class="label">Food log</p><h2>Add a meal</h2></div><div class="form"><div class="fld"><label for="fw">Meal</label><select id="fw"><option>Breakfast</option><option>Lunch</option><option>Snack</option><option>Dinner</option></select></div>' +
@@ -263,8 +269,10 @@
       q(sb.from('messages').select('*').order('created_at').limit(2000)),
       q(sb.from('exercise_library').select('*').order('category').order('name')).catch(function () { return []; }),
       q(sb.from('workout_templates').select('*').order('name')).catch(function () { return []; }),
-      q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; })
+      q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; }),
+      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; })
     ]);
+    D.guide = res[8];
     D.library = res[5]; D.templates = res[6]; D.tplEx = {};
     res[7].forEach(function (e) { (D.tplEx[e.template_id] = D.tplEx[e.template_id] || []).push(e); });
     D.clients = res[0]; D.sessions = res[1]; D.payments = res[2];
@@ -421,11 +429,20 @@
   }
   function nutritionEditor(d) {
     var n = d.nutrition || {};
-    return '<div class="form"><div class="fld"><label for="nu_title">Plan title</label><input id="nu_title" value="' + esc(n.title || 'Ancestral basics') + '"></div>' +
-      '<div class="fld"><label for="nu_sum">Summary</label><textarea id="nu_sum" rows="2">' + esc(n.summary || '') + '</textarea></div>' +
-      '<div class="fld"><label for="nu_g">Guidelines (one per line)</label><textarea id="nu_g" rows="6">' + esc((n.guidelines || []).join('\n')) + '</textarea></div>' +
-      '<div class="fld"><label for="nu_s">Sample day (one per line, "Meal: food")</label><textarea id="nu_s" rows="4" placeholder="Breakfast: 4 eggs, berries">' + esc((n.sample_day || []).map(function (m) { return m.meal + ': ' + m.food; }).join('\n')) + '</textarea></div>' +
-      '<button class="btn block" data-act="savenutrition">Save nutrition plan</button></div>';
+    return '<p class="muted small">Every client sees your shared meal guide (Library tab → Meal guide). Add notes here that only ' + esc(first(d.client.full_name)) + ' sees, shown at the top of their Food tab.</p>' +
+      '<div class="form"><div class="fld"><label for="nu_sum">Personal note</label><textarea id="nu_sum" rows="3" placeholder="e.g. Focus on eating breakfast every day this month.">' + esc(n.summary || '') + '</textarea></div>' +
+      '<div class="fld"><label for="nu_g">Personal guidelines (one per line, optional)</label><textarea id="nu_g" rows="4" placeholder="Extra carbs on training days">' + esc((n.guidelines || []).join('\n')) + '</textarea></div>' +
+      '<button class="btn block" data-act="savenutrition">Save notes</button></div>';
+  }
+  function mealGuideEditor() {
+    var g = S.data.guide || { intro: '', guidelines: [], days: [] };
+    var days = S.guideDraft || g.days || [];
+    return '<p class="muted small">One meal guide that every client sees on their Food tab. One meal per line, written as <b>Meal: idea | tip</b>.</p>' +
+      '<div class="form" id="guideform"><div class="fld"><label for="mg_intro">Intro</label><textarea id="mg_intro" rows="3">' + esc(g.intro || '') + '</textarea></div>' +
+      '<div class="fld"><label for="mg_g">Guidelines (one per line)</label><textarea id="mg_g" rows="6">' + esc((g.guidelines || []).join('\n')) + '</textarea></div>' +
+      days.map(function (d, i) { return '<div class="ed" data-day><div class="row"><input data-dn aria-label="Day name" value="' + esc(d.name || 'Day ' + (i + 1)) + '" style="flex:1;min-width:0;border:1px solid #c9c4ba;padding:8px"><button class="x" data-act="rmday" aria-label="Remove day">×</button></div><textarea data-dm rows="5" aria-label="Meals for this day">' + esc((d.meals || []).map(function (m) { return m.meal + ': ' + m.idea + (m.tip ? ' | ' + m.tip : ''); }).join('\n')) + '</textarea></div>'; }).join('') +
+      '<button class="btn ghost mini" data-act="addday">+ Add a day</button>' +
+      '<button class="btn block" data-act="saveguide">Save meal guide</button></div>';
   }
   function coachSchedule() {
     var D = S.data, days = [];
@@ -455,8 +472,8 @@
     var list = lib.filter(function (e) { return libMatches(e, f, qy); });
     var withVid = lib.filter(function (e) { return e.video_url; }).length;
     return '<div class="row"><div><p class="label">' + lib.length + ' exercises · ' + withVid + ' with video</p><h2>Library</h2></div><button class="btn mini" data-act="newlib">+ New</button></div>' +
-      '<div class="seg" role="group" style="grid-template-columns:1fr 1fr"><button aria-pressed="' + (S.libView !== 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="ex">Exercises</button><button aria-pressed="' + (S.libView === 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="tpl">Templates (' + (D.templates || []).length + ')</button></div>' +
-      (S.libView === 'tpl' ? templatesList() :
+      '<div class="seg" role="group"><button aria-pressed="' + (!S.libView || S.libView === 'ex' ? 'true' : 'false') + '" data-act="libview" data-v="ex">Exercises</button><button aria-pressed="' + (S.libView === 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="tpl">Templates</button><button aria-pressed="' + (S.libView === 'meals' ? 'true' : 'false') + '" data-act="libview" data-v="meals">Meal guide</button></div>' +
+      (S.libView === 'tpl' ? templatesList() : S.libView === 'meals' ? mealGuideEditor() :
       '<input id="libq" class="libsearch" type="search" placeholder="Search exercises" value="' + esc(S.libQ || '') + '" aria-label="Search exercises">' +
       '<div class="cats"><button class="chip' + (!f ? ' on' : '') + '" data-act="libcat" data-v="">All</button>' + CATS.map(function (c) { var n = lib.filter(function (e) { return e.category === c; }).length; return n ? '<button class="chip' + (f === c ? ' on' : '') + '" data-act="libcat" data-v="' + esc(c) + '">' + esc(c) + ' ' + n + '</button>' : ''; }).join('') + '</div>' +
       '<div class="list">' + (list.length ? list.map(function (e) { return '<button class="li tap" data-act="editlib" data-id="' + e.id + '"><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + (e.equipment ? ' · ' + esc(e.equipment) : '') + ' · ' + (e.default_sets || '') + ' × ' + esc(e.default_reps || '') + '</span></span>' + (e.video_url ? '<span class="chip ok">Video</span>' : '<span class="chip">No video</span>') + '</button>'; }).join('') : '<p class="muted small" style="padding:12px 0">' + (lib.length ? 'No exercises match.' : 'Your library is empty. Run the library setup code in Supabase, or add exercises with + New.') + '</p>') + '</div>' +
@@ -519,7 +536,14 @@
     render(); document.body.appendChild(ov);
   }
   /* A toast that doesn't re-render the screen, so unsaved edits in open forms are kept. */
-  function toastLite(t) { var el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = t; document.body.appendChild(el); setTimeout(function () { el.remove(); }, 2200); }
+  function toastLite(t) { document.querySelectorAll('body > .toast').forEach(function (x) { x.remove(); }); var el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = t; document.body.appendChild(el); setTimeout(function () { el.remove(); }, 2200); }
+  function parseMeals(text) {
+    return String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+      var i = l.indexOf(':'), meal = i > 0 && i < 20 ? l.slice(0, i).trim() : '', rest = i > 0 && i < 20 ? l.slice(i + 1) : l;
+      var j = rest.indexOf('|'), idea = (j > -1 ? rest.slice(0, j) : rest).trim(), tip = j > -1 ? rest.slice(j + 1).trim() : '';
+      return { meal: meal || 'Meal', idea: idea, tip: tip };
+    }).filter(function (m) { return m.idea; });
+  }
   function readExRows(card) {
     var out = [], pos = 0;
     card.querySelectorAll('.exgroup').forEach(function (gp) {
@@ -695,9 +719,9 @@
         }
         case 'savenutrition': {
           var lines = val('nu_g').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
-          var sd = val('nu_s').split('\n').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) { var i = s.indexOf(':'); return i > 0 ? { meal: s.slice(0, i).trim(), food: s.slice(i + 1).trim() } : { meal: '', food: s }; });
-          var nrow = await q(sb.from('nutrition_plans').upsert({ client_id: D.detail.client.id, title: val('nu_title'), summary: val('nu_sum') || null, guidelines: lines, sample_day: sd, updated_at: new Date().toISOString() }, { onConflict: 'client_id' }).select().single());
-          D.detail.nutrition = nrow; return toast('Nutrition plan saved.');
+          var sd = ''.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) { var i = s.indexOf(':'); return i > 0 ? { meal: s.slice(0, i).trim(), food: s.slice(i + 1).trim() } : { meal: '', food: s }; });
+          var nrow = await q(sb.from('nutrition_plans').upsert({ client_id: D.detail.client.id, title: 'Personal notes', summary: val('nu_sum') || null, guidelines: lines, sample_day: [], updated_at: new Date().toISOString() }, { onConflict: 'client_id' }).select().single());
+          D.detail.nutrition = nrow; return toast('Notes saved.');
         }
         case 'createprogram': {
           var pr = await q(sb.from('programs').insert({ client_id: D.detail.client.id, name: val('pg_name') || 'Program', weeks: +val('pg_weeks') || 4, current_week: 1, active: true }).select().single());
@@ -718,7 +742,25 @@
           await q(sb.from('workouts').delete().eq('id', d.id));
           D.detail.workouts = D.detail.workouts.filter(function (w) { return w.id !== d.id; }); toast('Workout deleted.'); return draw();
         }
-        case 'libview': S.libView = d.v; return draw();
+        case 'libview': S.libView = d.v; S.guideDraft = null; return draw();
+        case 'mealday': S.mealDay = +d.v; return draw();
+        case 'addday': case 'rmday': {
+          var form = document.getElementById('guideform'), cur = [];
+          form.querySelectorAll('[data-day]').forEach(function (el) { cur.push({ el: el, name: el.querySelector('[data-dn]').value, text: el.querySelector('[data-dm]').value }); });
+          if (d.act === 'rmday') { var me = t.closest('[data-day]'); cur = cur.filter(function (x) { return x.el !== me; }); }
+          var keepIntro = val('mg_intro'), keepG = val('mg_g');
+          S.guideDraft = cur.map(function (x) { return { name: x.name, meals: parseMeals(x.text) }; });
+          if (d.act === 'addday') S.guideDraft.push({ name: 'Day ' + (S.guideDraft.length + 1), meals: [{ meal: 'Breakfast', idea: '', tip: '' }, { meal: 'Lunch', idea: '', tip: '' }, { meal: 'Dinner', idea: '', tip: '' }] });
+          S.data.guide = Object.assign({}, S.data.guide || {}, { intro: keepIntro, guidelines: keepG.split('\n').map(function (z) { return z.trim(); }).filter(Boolean) });
+          return draw();
+        }
+        case 'saveguide': {
+          var gform = document.getElementById('guideform'), gdays = [];
+          gform.querySelectorAll('[data-day]').forEach(function (el) { var nm = el.querySelector('[data-dn]').value.trim(), ml = parseMeals(el.querySelector('[data-dm]').value); if (ml.length) gdays.push({ name: nm || 'Day ' + (gdays.length + 1), meals: ml }); });
+          var grow = { id: 1, intro: val('mg_intro') || null, guidelines: val('mg_g').split('\n').map(function (z) { return z.trim(); }).filter(Boolean), days: gdays, updated_at: new Date().toISOString() };
+          D.guide = await q(sb.from('meal_guide').upsert(grow, { onConflict: 'id' }).select().single());
+          S.guideDraft = null; return toast('Meal guide saved. All clients see it now.');
+        }
         case 'libcat': S.libCat = d.v; return draw();
         case 'newlib': S.sub = 'libedit'; S.libEditId = null; window.scrollTo(0, 0); return draw();
         case 'editlib': S.sub = 'libedit'; S.libEditId = d.id; window.scrollTo(0, 0); return draw();
@@ -775,7 +817,7 @@
           var nt = await q(sb.from('workout_templates').insert({ name: wk.title, focus: wk.focus, minutes: wk.minutes, in_person: wk.in_person }).select().single());
           D.tplEx[nt.id] = await q(sb.from('template_exercises').insert(wex.map(function (e, i) { return { template_id: nt.id, library_id: e.library_id || null, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }; })).select());
           D.templates = (D.templates || []).concat([nt]).sort(function (a, b) { return a.name.localeCompare(b.name); });
-          return toastLite('Saved "' + wk.title + '" as a template.');
+          return toast('Saved "' + wk.title + '" as a template.');
         }
         case 'applytpl': {
           var tid = val('tpl_pick'), tp = D.templates.find(function (x) { return x.id === tid; }), tex = D.tplEx[tid] || [];

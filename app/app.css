@@ -127,3 +127,9 @@ select.inline{border:1px solid #c9c4ba;padding:6px 8px;font:400 13px/1.2 var(--u
 .pkrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--rule);cursor:pointer}
 .pkrow input{width:20px;height:20px;margin-top:3px;accent-color:var(--rust);flex:0 0 auto}
 .pk .btn[disabled]{opacity:.5}
+
+/* meal guide */
+.meals{display:grid;gap:8px}
+.mealcard{border:1px solid var(--rule);border-left:3px solid var(--rust);padding:12px 14px;display:grid;gap:4px}
+.mealcard h3{font-size:20px}
+#guideform textarea[data-dm]{border:1px solid #c9c4ba;padding:10px;font:400 14px/1.5 var(--ui);width:100%;background:#fff;border-radius:0}

@@ -95,6 +95,7 @@
     }).subscribe();
   }
 
+  var WEEK_AGO = ymd(new Date(NOW.getTime() - 6 * 864e5));
   /* ---------- client data ---------- */
   async function loadClient() {
     var uid = S.session.user.id, D = S.data = {};
@@ -113,9 +114,12 @@
       q(sb.from('documents').select('*').eq('client_id', cid).order('signed_on', { ascending: false })),
       q(sb.from('workout_completions').select('*').eq('client_id', cid).gte('completed_at', weekStart().toISOString())),
       q(sb.from('set_logs').select('*').eq('client_id', cid).eq('logged_on', TODAY)),
-      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; })
+      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; }),
+      q(sb.from('habits').select('*').eq('active', true).order('position')).catch(function () { return []; }),
+      q(sb.from('habit_logs').select('*').eq('client_id', cid).gte('day', WEEK_AGO)).catch(function () { return []; }),
+      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; })
     ]);
-    D.guide = res[11];
+    D.guide = res[11]; D.habits = res[12]; D.habitLogs = res[13]; D.foods = res[14];
     D.program = res[0][0] || null; D.checkins = res[1]; D.nutrition = res[2]; D.food = res[3]; D.water = res[4] ? res[4].glasses : 0;
     D.messages = res[5]; D.sessions = res[6]; D.payments = res[7]; D.documents = res[8]; D.completions = res[9];
     D.logs = {}; res[10].forEach(function (l) { D.logs[l.exercise_id + '_' + l.set_number] = l; });
@@ -172,6 +176,7 @@
       (w ? '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><p class="label">Today\'s training</p><span class="chip' + (w.in_person ? ' solid' : '') + '">' + (isDone(w.id) ? 'Done' : w.in_person ? 'In person' : 'On your own') + '</span></div><h3>' + esc(w.title) + '</h3><p class="muted small">' + (D.exercises[w.id] || []).length + ' exercises' + (w.minutes ? ' · about ' + w.minutes + ' min' : '') + '</p></button>'
         : '<div class="card"><p class="label">Training</p><p class="muted">' + COACH.name + ' is building your program. It will show up here.</p></div>') +
       '<div class="stats"><div class="stat"><b>' + left + '</b><span>Sessions left</span></div><div class="stat"><b>' + st.rolled + '</b><span>Rolled over</span></div><div class="stat"><b>' + doneN + '/' + D.workouts.length + '</b><span>Workouts this week</span></div></div>' +
+      habitsCard() +
       '<button class="card tap" data-go="checkin"><div class="row"><div><p class="label">Daily check-in</p><h3>' + (D.todayCheckin ? 'Checked in today' : 'How are you feeling?') + '</h3></div><span class="chip ' + (D.todayCheckin ? 'ok' : 'warn') + '">' + (D.todayCheckin ? 'Done' : '30 sec') + '</span></div></button>' +
       (last ? '<button class="card tap" data-tab="chat"><p class="label">Latest message</p><p>' + esc(last.body) + '</p><p class="muted small">' + (last.sender === 'coach' ? COACH.name : 'You') + ' · ' + esc(fmtDay(last.created_at)) + '</p></button>' : '');
   }
@@ -211,6 +216,11 @@
       '<button class="btn block" data-act="saveck">Save check-in</button>';
   }
   function clientFood() {
+    var seg = '<div class="seg" role="group" style="grid-template-columns:1fr 1fr"><button aria-pressed="' + (S.foodView !== 'shop' ? 'true' : 'false') + '" data-act="foodview" data-v="meals">Meal guide</button><button aria-pressed="' + (S.foodView === 'shop' ? 'true' : 'false') + '" data-act="foodview" data-v="shop">Shopping guide</button></div>';
+    if (S.foodView === 'shop') return seg + '<div><p class="label">Food</p><h2>Shopping guide</h2><p class="muted small">What to buy, what to skip, and what to grab instead. Ingredients are listed from most to least, so read the label.</p></div>' + foodList(false);
+    return seg + clientMeals();
+  }
+  function clientMeals() {
     var D = S.data, g = D.guide, n = D.nutrition, days = (g && g.days) || [];
     var di = S.mealDay != null ? S.mealDay : (NOW.getDay() + 6) % 7; if (di >= days.length) di = 0;
     var day = days[di];
@@ -270,9 +280,11 @@
       q(sb.from('exercise_library').select('*').order('category').order('name')).catch(function () { return []; }),
       q(sb.from('workout_templates').select('*').order('name')).catch(function () { return []; }),
       q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; }),
-      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; })
+      q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; }),
+      q(sb.from('habits').select('*').order('position')).catch(function () { return []; }),
+      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; })
     ]);
-    D.guide = res[8];
+    D.guide = res[8]; D.habits = res[9]; D.foods = res[10];
     D.library = res[5]; D.templates = res[6]; D.tplEx = {};
     res[7].forEach(function (e) { (D.tplEx[e.template_id] = D.tplEx[e.template_id] || []).push(e); });
     D.clients = res[0]; D.sessions = res[1]; D.payments = res[2];
@@ -298,9 +310,10 @@
       q(sb.from('workout_completions').select('*').eq('client_id', id).order('completed_at', { ascending: false }).limit(10)),
       q(sb.from('food_logs').select('*').eq('client_id', id).order('logged_at', { ascending: false }).limit(15)),
       q(sb.from('sessions').select('*').eq('client_id', id).order('starts_at', { ascending: false }).limit(40)),
-      q(sb.from('payments').select('*').eq('client_id', id).order('month', { ascending: false }).limit(24))
+      q(sb.from('payments').select('*').eq('client_id', id).order('month', { ascending: false }).limit(24)),
+      q(sb.from('habit_logs').select('*').eq('client_id', id).gte('day', WEEK_AGO)).catch(function () { return []; })
     ]);
-    var d = { client: cById(id), notes: res[0], messages: res[1], program: res[2][0] || null, nutrition: res[3], documents: res[4], checkins: res[5], completions: res[6], food: res[7], sessions: res[8], payments: res[9], workouts: [], exercises: {} };
+    var d = { client: cById(id), notes: res[0], messages: res[1], program: res[2][0] || null, nutrition: res[3], documents: res[4], checkins: res[5], completions: res[6], food: res[7], sessions: res[8], payments: res[9], habitLogs: res[10] || [], workouts: [], exercises: {} };
     if (d.program) {
       d.workouts = await q(sb.from('workouts').select('*').eq('program_id', d.program.id).order('position'));
       if (d.workouts.length) {
@@ -383,6 +396,7 @@
         (c.goal ? '<div class="card"><p class="label">Goal</p><p>' + esc(c.goal) + '</p></div>' : '') +
         '<div class="card"><p class="label">Plan</p><div class="list"><div class="li"><span>Next session</span><b>' + (m.st.next ? esc(fmtDay(m.st.next.starts_at) + ' · ' + fmtTime(m.st.next.starts_at)) : 'Not booked') + '</b></div><div class="li"><span>Schedule</span><b>' + esc(c.schedule || '—') + '</b></div><div class="li"><span>Price</span><b>' + (c.monthly_price != null ? money(c.monthly_price) + '/mo' : '—') + (c.payment_method ? ' · ' + esc(c.payment_method) : '') + '</b></div><div class="li"><span>Term</span><b>' + esc(c.term || '—') + (c.term_end ? ' (ends ' + esc(fmtShort(c.term_end)) + ')' : '') + '</b></div><div class="li"><span>Emergency contact</span><b>' + esc(c.emergency_contact || '—') + '</b></div></div></div>' +
         '<div class="card"><p class="label">Latest check-in</p>' + (ck ? '<p><b>' + esc(fmtShort(ck.day)) + '</b> · ' + (ck.weight != null ? ck.weight + ' lb · ' : '') + 'Sleep ' + (ck.sleep || '—') + ' · Energy ' + (ck.energy || '—') + ' · Soreness ' + (ck.soreness || '—') + ' · Stress ' + (ck.stress || '—') + '</p>' + (ck.note ? '<p class="small">"' + esc(ck.note) + '"</p>' : '') : '<p class="muted small">No check-ins yet.</p>') + '</div>' +
+        habitsOverview(d) +
         '<div class="card"><p class="label">Recent workouts</p>' + (d.completions.length ? d.completions.map(function (x) { var w = d.workouts.find(function (y) { return y.id === x.workout_id; }); return '<div class="li"><span>' + esc(w ? w.title : 'Workout') + (x.note ? '<br><span class="small muted">"' + esc(x.note) + '"</span>' : '') + '</span><span class="muted small">' + esc(fmtShort(ymd(new Date(x.completed_at)))) + '</span></div>'; }).join('') : '<p class="muted small">None yet.</p>') + '</div>' +
         '<div class="card"><p class="label">Recent food log</p>' + (d.food.length ? d.food.map(function (f) { return '<div class="li"><span><span class="tag">' + esc(f.meal || '') + '</span> ' + esc(f.description) + '</span><span class="muted small">' + esc(fmtShort(ymd(new Date(f.logged_at)))) + '</span></div>'; }).join('') : '<p class="muted small">Nothing logged yet.</p>') + '</div>';
     } else if (tab === 'training') body = programEditor(d);
@@ -464,6 +478,94 @@
   }
 
 
+
+  /* ---------- daily habits + food list ---------- */
+  function habitDone(logs, hid, day) { return logs.some(function (l) { return l.habit_id === hid && l.day === day && l.done; }); }
+  function habitWeek(habits, logs) {
+    if (!habits.length) return 0;
+    var ids = habits.map(function (h) { return h.id; });
+    var n = logs.filter(function (l) { return l.done && l.day >= WEEK_AGO && ids.indexOf(l.habit_id) > -1; }).length;
+    return Math.round(n / (habits.length * 7) * 100);
+  }
+  function habitsCard() {
+    var D = S.data, H = D.habits || [], L = D.habitLogs || [];
+    if (!H.length) return '';
+    var n = H.filter(function (h) { return habitDone(L, h.id, TODAY); }).length;
+    return '<div class="card"><div class="row"><p class="label">Daily habits</p><span class="chip ' + (n === H.length ? 'ok' : '') + '">' + n + ' of ' + H.length + ' today</span></div>' +
+      '<div class="habits">' + H.map(function (h) { var on = habitDone(L, h.id, TODAY);
+        return '<button class="habit" aria-pressed="' + (on ? 'true' : 'false') + '" data-act="habit" data-id="' + h.id + '"><span class="hbox">' + (on ? ICON.check : '') + '</span><span><b>' + esc(h.name) + '</b>' + (h.description ? '<span class="small muted">' + esc(h.description) + '</span>' : '') + '</span></button>'; }).join('') + '</div>' +
+      '<p class="muted small">Last 7 days: ' + habitWeek(H, L) + '% of habits done. Tap one to check it off.</p></div>';
+  }
+  function foodMatches(x, f, qy) {
+    if (f === 'yes' && x.verdict !== 'yes') return false;
+    if (f === 'no' && x.verdict !== 'no') return false;
+    if (f === 'costco' && !(x.verdict === 'yes' && /costco/i.test(x.store || ''))) return false;
+    return !qy || (x.name + ' ' + x.category + ' ' + (x.store || '') + ' ' + (x.swap || '') + ' ' + (x.note || '')).toLowerCase().indexOf(qy) > -1;
+  }
+  function foodList(asCoach) {
+    var all = S.data.foods || [], f = S.foodF || '', qy = (S.foodQ || '').toLowerCase();
+    var list = all.filter(function (x) { return foodMatches(x, f, qy); });
+    var chips = [['', 'All'], ['yes', 'Buy'], ['no', 'Avoid'], ['costco', 'Costco list']];
+    var out = '<input id="foodq" class="libsearch" type="search" placeholder="Search foods, brands, ingredients" value="' + esc(S.foodQ || '') + '" aria-label="Search foods">' +
+      '<div class="cats">' + chips.map(function (c) { return '<button class="chip' + (f === c[0] ? ' on' : '') + '" data-act="foodf" data-v="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>';
+    if (!all.length) return out + '<div class="empty">' + (asCoach ? 'Your food list is empty. Run the habits and foods setup code in Supabase, or add items with + New food.' : COACH.name + ' is putting your shopping guide together.') + '</div>';
+    if (!list.length) return out + '<p class="muted small">Nothing matches.</p>';
+    [['yes', 'Buy', 'Good to buy. Still check the label for the brand you pick.'], ['no', 'Avoid', 'Watch for these on labels, and what to use instead.']].forEach(function (v) {
+      var items = list.filter(function (x) { return x.verdict === v[0]; }); if (!items.length) return;
+      var cats = []; items.forEach(function (x) { if (cats.indexOf(x.category) < 0) cats.push(x.category); });
+      out += '<div><h3>' + (f === 'costco' ? 'Costco list' : v[1]) + '</h3><p class="muted small">' + (f === 'costco' ? 'Example Costco run. Grab what fits your week.' : v[2]) + '</p></div>' +
+        cats.map(function (c) {
+          return '<div class="card"><p class="label">' + esc(c) + '</p><div class="list">' + items.filter(function (x) { return x.category === c; }).map(function (x) {
+            var inner = '<span class="fi"><b>' + esc(x.name) + '</b>' + (x.swap ? '<span class="small">Instead: ' + esc(x.swap) + '</span>' : '') + (x.note ? '<span class="small muted">' + esc(x.note) + '</span>' : '') + '</span>' +
+              '<span class="fchips"><span class="chip ' + (x.verdict === 'yes' ? 'ok' : 'warn') + '">' + (x.verdict === 'yes' ? 'Buy' : 'Avoid') + '</span>' + (x.store ? '<span class="tag">' + esc(x.store) + '</span>' : '') + '</span>';
+            return asCoach ? '<button class="li tap" data-act="editfood" data-id="' + x.id + '">' + inner + '</button>' : '<div class="li">' + inner + '</div>';
+          }).join('') + '</div></div>';
+        }).join('');
+    });
+    return out;
+  }
+  function coachFoods() {
+    var all = S.data.foods || [];
+    return '<div class="row"><p class="muted small" style="margin:0">' + all.filter(function (x) { return x.verdict === 'yes'; }).length + ' to buy · ' + all.filter(function (x) { return x.verdict === 'no'; }).length + ' to avoid. Clients see this on their Food tab.</p><button class="btn mini" data-act="newfood">+ New</button></div>' +
+      foodList(true) + '<button class="btn ghost block" data-act="foodimport">Import from spreadsheet</button>';
+  }
+  function foodCats() { var c = []; (S.data.foods || []).forEach(function (x) { if (c.indexOf(x.category) < 0) c.push(x.category); }); return c; }
+  function foodForm() {
+    var x = (S.data.foods || []).find(function (y) { return y.id === S.foodId; }) || { verdict: S.foodF === 'no' ? 'no' : 'yes' };
+    return '<div><p class="label">' + (x.id ? 'Edit food' : 'New food') + '</p><h2>' + esc(x.name || 'New food') + '</h2></div><div class="form">' +
+      '<div class="fld"><label for="fd_name">Food, brand or ingredient *</label><input id="fd_name" value="' + esc(x.name || '') + '" placeholder="e.g. Kirkland grass-fed ground beef"></div>' +
+      '<div class="two"><div class="fld"><label for="fd_v">Verdict *</label><select id="fd_v"><option value="yes"' + (x.verdict === 'yes' ? ' selected' : '') + '>Buy</option><option value="no"' + (x.verdict === 'no' ? ' selected' : '') + '>Avoid</option></select></div>' +
+      '<div class="fld"><label for="fd_cat">Category *</label><input id="fd_cat" list="fd_cats" value="' + esc(x.category || '') + '" placeholder="Meat & fish"><datalist id="fd_cats">' + foodCats().map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></div></div>' +
+      '<div class="fld"><label for="fd_store">Store (optional)</label><input id="fd_store" value="' + esc(x.store || '') + '" placeholder="Costco"></div>' +
+      '<div class="fld"><label for="fd_swap">Instead, use (for Avoid items)</label><input id="fd_swap" value="' + esc(x.swap || '') + '" placeholder="Butter, tallow or olive oil"></div>' +
+      '<div class="fld"><label for="fd_note">Note</label><textarea id="fd_note" rows="2">' + esc(x.note || '') + '</textarea></div>' +
+      '<button class="btn block" data-act="savefooditem" data-id="' + (x.id || '') + '">Save</button>' +
+      (x.id ? '<button class="x" style="width:auto;padding:0 10px;justify-self:start" data-act="delfood" data-id="' + x.id + '">Delete</button>' : '') + '</div>';
+  }
+  function foodImportScreen() {
+    return '<div><p class="label">Bulk add</p><h2>Import foods</h2><p class="muted small">In Google Sheets or Excel, select your rows, copy, and paste below. Columns in this order:</p></div>' +
+      '<div class="card small"><b>Name · Buy or Avoid · Category · Store · Instead · Note</b><span class="muted">Only Name, Buy or Avoid, and Category are required.</span></div>' +
+      '<div class="fld"><label for="fimp">Paste rows</label><textarea id="fimp" rows="10" placeholder="Kirkland grass-fed ground beef	Buy	Meat & fish	Costco		Freezes well"></textarea></div>' +
+      '<p class="err" id="fimperr" hidden></p><button class="btn block" data-act="dofoodimport">Import</button>';
+  }
+  function habitRow(h) {
+    h = h || { active: true };
+    return '<div class="ed" data-hab data-hid="' + (h.id || '') + '"><input data-hn aria-label="Habit" value="' + esc(h.name || '') + '" placeholder="Habit, e.g. 10 min walk after dinner" style="border:1px solid #c9c4ba;padding:8px;min-width:0"><textarea data-hd rows="2" aria-label="Description" placeholder="Short explanation (optional)">' + esc(h.description || '') + '</textarea><div class="row"><label class="opt"><input type="checkbox" data-ha' + (h.active !== false ? ' checked' : '') + '><span>Show to clients</span></label><button class="x" data-act="rmhabit" aria-label="Remove habit">×</button></div></div>';
+  }
+  function habitsEditor() {
+    return '<p class="muted small">Every client sees these on their Today screen and checks them off each day. You see their last 7 days on each client\'s Overview.</p>' +
+      '<div class="form"><div id="habrows" style="display:grid;gap:10px">' + (S.data.habits || []).map(habitRow).join('') + '</div>' +
+      '<button class="btn ghost mini" data-act="addhabit">+ Add a habit</button><button class="btn block" data-act="savehabits">Save habits</button></div>';
+  }
+  function habitsOverview(d) {
+    var H = (S.data.habits || []).filter(function (h) { return h.active !== false; }), L = d.habitLogs || [];
+    if (!H.length) return '';
+    var days = []; for (var i = 6; i >= 0; i--) days.push(ymd(new Date(NOW.getTime() - i * 864e5)));
+    return '<div class="card"><div class="row"><p class="label">Habits, last 7 days</p><span class="chip">' + habitWeek(H, L) + '%</span></div><div class="list">' +
+      H.map(function (h) { var n = days.filter(function (dy) { return habitDone(L, h.id, dy); }).length;
+        return '<div class="li"><span>' + esc(h.name) + '</span><span class="hdots" aria-label="' + n + ' of 7 days">' + days.map(function (dy) { return '<i class="' + (habitDone(L, h.id, dy) ? 'on' : '') + '"></i>'; }).join('') + '</span></div>'; }).join('') + '</div></div>';
+  }
+
   /* ---------- exercise library ---------- */
   var CATS = ['Feet & ankles', 'Legs', 'Chest', 'Back', 'Shoulders', 'Arms', 'Core', 'Plyos', 'Rotation', 'Static holds', 'Carries', 'Mobility', 'Conditioning'];
   function libMatches(e, f, qy) { return (!f || e.category === f) && (!qy || (e.name + ' ' + (e.equipment || '') + ' ' + (e.cues || '')).toLowerCase().indexOf(qy) > -1); }
@@ -471,9 +573,10 @@
     var D = S.data, lib = D.library || [], f = S.libCat || '', qy = (S.libQ || '').toLowerCase();
     var list = lib.filter(function (e) { return libMatches(e, f, qy); });
     var withVid = lib.filter(function (e) { return e.video_url; }).length;
-    return '<div class="row"><div><p class="label">' + lib.length + ' exercises · ' + withVid + ' with video</p><h2>Library</h2></div><button class="btn mini" data-act="newlib">+ New</button></div>' +
-      '<div class="seg" role="group"><button aria-pressed="' + (!S.libView || S.libView === 'ex' ? 'true' : 'false') + '" data-act="libview" data-v="ex">Exercises</button><button aria-pressed="' + (S.libView === 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="tpl">Templates</button><button aria-pressed="' + (S.libView === 'meals' ? 'true' : 'false') + '" data-act="libview" data-v="meals">Meal guide</button></div>' +
-      (S.libView === 'tpl' ? templatesList() : S.libView === 'meals' ? mealGuideEditor() :
+    var lv = S.libView || 'ex', segs = [['ex', 'Exercises'], ['tpl', 'Templates'], ['meals', 'Meals'], ['habits', 'Habits'], ['foods', 'Foods']];
+    return '<div class="row"><div><p class="label">' + (lv === 'ex' ? lib.length + ' exercises · ' + withVid + ' with video' : 'Library') + '</p><h2>' + { ex: 'Exercises', tpl: 'Templates', meals: 'Meal guide', habits: 'Daily habits', foods: 'Food list' }[lv] + '</h2></div>' + (lv === 'ex' ? '<button class="btn mini" data-act="newlib">+ New</button>' : '') + '</div>' +
+      '<div class="seg five" role="group">' + segs.map(function (x) { return '<button aria-pressed="' + (lv === x[0] ? 'true' : 'false') + '" data-act="libview" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      (lv === 'tpl' ? templatesList() : lv === 'meals' ? mealGuideEditor() : lv === 'habits' ? habitsEditor() : lv === 'foods' ? coachFoods() :
       '<input id="libq" class="libsearch" type="search" placeholder="Search exercises" value="' + esc(S.libQ || '') + '" aria-label="Search exercises">' +
       '<div class="cats"><button class="chip' + (!f ? ' on' : '') + '" data-act="libcat" data-v="">All</button>' + CATS.map(function (c) { var n = lib.filter(function (e) { return e.category === c; }).length; return n ? '<button class="chip' + (f === c ? ' on' : '') + '" data-act="libcat" data-v="' + esc(c) + '">' + esc(c) + ' ' + n + '</button>' : ''; }).join('') + '</div>' +
       '<div class="list">' + (list.length ? list.map(function (e) { return '<button class="li tap" data-act="editlib" data-id="' + e.id + '"><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + (e.equipment ? ' · ' + esc(e.equipment) : '') + ' · ' + (e.default_sets || '') + ' × ' + esc(e.default_reps || '') + '</span></span>' + (e.video_url ? '<span class="chip ok">Video</span>' : '<span class="chip">No video</span>') + '</button>'; }).join('') : '<p class="muted small" style="padding:12px 0">' + (lib.length ? 'No exercises match.' : 'Your library is empty. Run the library setup code in Supabase, or add exercises with + New.') + '</p>') + '</div>' +
@@ -567,7 +670,7 @@
   function title() {
     if (S.role !== 'coach') { if (S.sub === 'workout') return 'Workout'; if (S.sub === 'checkin') return 'Check-in'; if (S.sub === 'addfood') return 'Food log';
       return { today: 'Primal Roots', train: 'Train', food: 'Food', chat: COACH.name, me: 'My plan' }[S.tab]; }
-    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template';
+    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template'; if (S.sub === 'foodedit') return 'Food'; if (S.sub === 'foodimport') return 'Import';
     if (S.tab === 'inbox' && S.chatWith) { var c = cById(S.chatWith); return c ? c.full_name : 'Chat'; }
     return { today: 'Primal Roots', clients: 'Clients', library: 'Library', schedule: 'Schedule', inbox: 'Inbox' }[S.tab];
   }
@@ -579,7 +682,7 @@
     else if (!isCoach) body = S.sub === 'workout' ? workoutDetail(S.subId) : S.sub === 'checkin' ? checkinScreen() : S.sub === 'addfood' ? addFood() :
       ({ today: clientToday, train: clientTrain, food: clientFood, chat: function () { return chatView(S.data.messages, false, S.data.client.id); }, me: clientMe })[S.tab]();
     else body = S.sub === 'client' ? coachClient() : S.sub === 'addclient' ? '<div><p class="label">New client</p><h2>Add client</h2></div>' + clientForm(null) :
-      S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'tpledit' ? templateEditor() :
+      S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'foodedit' ? foodForm() : S.sub === 'foodimport' ? foodImportScreen() : S.sub === 'tpledit' ? templateEditor() :
       ({ today: coachToday, clients: coachClients, library: coachLibrary, schedule: coachSchedule, inbox: coachInbox })[S.tab]();
     var back = !!S.sub || (isCoach && S.tab === 'inbox' && S.chatWith);
     var tabs = isCoach ? COACH_TABS : CLIENT_TABS, showTabs = isCoach || S.data.client;
@@ -622,6 +725,7 @@
   root.addEventListener('input', function (e) {
     var t = e.target;
     if (t.id === 'libq') { S.libQ = t.value; var pos = t.selectionStart; draw(); var li = document.getElementById('libq'); if (li) { li.focus(); li.setSelectionRange(pos, pos); } return; }
+    if (t.id === 'foodq') { S.foodQ = t.value; var fp = t.selectionStart; draw(); var fi = document.getElementById('foodq'); if (fi) { fi.focus(); fi.setSelectionRange(fp, fp); } return; }
     if (t.dataset.dl) { S.drafts = S.drafts || {}; (S.drafts[t.dataset.dl] = S.drafts[t.dataset.dl] || {})[t.dataset.f] = t.value; }
   });
   root.addEventListener('change', async function (e) {
@@ -762,6 +866,60 @@
           S.guideDraft = null; return toast('Meal guide saved. All clients see it now.');
         }
         case 'libcat': S.libCat = d.v; return draw();
+        case 'foodview': S.foodView = d.v; window.scrollTo(0, 0); return draw();
+        case 'foodf': S.foodF = d.v; return draw();
+        case 'habit': {
+          var hl = D.habitLogs.find(function (l) { return l.habit_id === d.id && l.day === TODAY; }), hdone = !(hl && hl.done);
+          var hrow = await q(sb.from('habit_logs').upsert({ client_id: D.client.id, habit_id: d.id, day: TODAY, done: hdone }, { onConflict: 'client_id,habit_id,day' }).select().single());
+          D.habitLogs = D.habitLogs.filter(function (l) { return !(l.habit_id === d.id && l.day === TODAY); }).concat([hrow]);
+          return draw();
+        }
+        case 'addhabit': document.getElementById('habrows').insertAdjacentHTML('beforeend', habitRow(null)); return;
+        case 'rmhabit': { var hb = t.closest('[data-hab]'); if (hb.dataset.hid) { hb.hidden = true; hb.dataset.remove = '1'; } else hb.remove(); return; }
+        case 'savehabits': {
+          var hpos = 0, hjobs = [];
+          document.querySelectorAll('#habrows [data-hab]').forEach(function (el) {
+            var hid = el.dataset.hid;
+            if (el.dataset.remove === '1') { if (hid) hjobs.push(q(sb.from('habits').delete().eq('id', hid))); return; }
+            var hr = { name: el.querySelector('[data-hn]').value.trim(), description: el.querySelector('[data-hd]').value.trim() || null, active: el.querySelector('[data-ha]').checked, position: hpos };
+            if (!hr.name) return; hpos++;
+            hjobs.push(hid ? q(sb.from('habits').update(hr).eq('id', hid)) : q(sb.from('habits').insert(hr)));
+          });
+          await Promise.all(hjobs);
+          D.habits = await q(sb.from('habits').select('*').order('position'));
+          return toast('Habits saved. Clients see them now.');
+        }
+        case 'newfood': S.sub = 'foodedit'; S.foodId = null; window.scrollTo(0, 0); return draw();
+        case 'editfood': S.sub = 'foodedit'; S.foodId = d.id; window.scrollTo(0, 0); return draw();
+        case 'foodimport': S.sub = 'foodimport'; window.scrollTo(0, 0); return draw();
+        case 'savefooditem': {
+          var fr = { name: val('fd_name'), verdict: val('fd_v') || 'yes', category: val('fd_cat'), store: val('fd_store') || null, swap: val('fd_swap') || null, note: val('fd_note') || null };
+          if (!fr.name || !fr.category) return toastLite('Add a name and a category.');
+          var fsaved = d.id ? await q(sb.from('food_items').update(fr).eq('id', d.id).select().single()) : await q(sb.from('food_items').insert(fr).select().single());
+          D.foods = (D.foods || []).filter(function (x) { return x.id !== fsaved.id; }).concat([fsaved]).sort(function (a, b) { return a.category.localeCompare(b.category) || a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; S.libView = 'foods'; return toast('Saved.');
+        }
+        case 'delfood': {
+          if (t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to delete'; return; }
+          await q(sb.from('food_items').delete().eq('id', d.id)); D.foods = D.foods.filter(function (x) { return x.id !== d.id; }); S.sub = null; return toast('Deleted.');
+        }
+        case 'dofoodimport': {
+          var fraw = document.getElementById('fimp').value, frows = [], fbad = [];
+          fraw.split(/\r?\n/).forEach(function (line, i) {
+            if (!line.trim()) return;
+            var c = line.indexOf('\t') > -1 ? line.split('\t') : line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function (x) { return x.replace(/^"|"$/g, ''); });
+            c = c.map(function (x) { return (x || '').trim(); });
+            if (/^name$/i.test(c[0])) return;
+            var v = /^(y|yes|buy|good|ok)/i.test(c[1] || '') ? 'yes' : /^(n|no|avoid|bad|skip)/i.test(c[1] || '') ? 'no' : null;
+            if (!c[0] || !v || !c[2]) { fbad.push(i + 1); return; }
+            frows.push({ name: c[0], verdict: v, category: c[2], store: c[3] || null, swap: c[4] || null, note: c[5] || null });
+          });
+          var fe = document.getElementById('fimperr');
+          if (!frows.length) { fe.textContent = 'Nothing to import. Each row needs a name, Buy or Avoid, and a category.'; fe.hidden = false; return; }
+          var fins = await q(sb.from('food_items').insert(frows).select());
+          D.foods = (D.foods || []).concat(fins).sort(function (a, b) { return a.category.localeCompare(b.category) || a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; S.libView = 'foods'; return toast('Imported ' + fins.length + ' items' + (fbad.length ? '. Skipped rows ' + fbad.join(', ') + ' (missing name, Buy/Avoid or category).' : '.'));
+        }
         case 'newlib': S.sub = 'libedit'; S.libEditId = null; window.scrollTo(0, 0); return draw();
         case 'editlib': S.sub = 'libedit'; S.libEditId = d.id; window.scrollTo(0, 0); return draw();
         case 'libimport': S.sub = 'libimport'; window.scrollTo(0, 0); return draw();

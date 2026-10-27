@@ -115,3 +115,15 @@ h3{font:400 21px/1.05 var(--display);letter-spacing:.04em;margin:0}
 .tag{font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--stone)}
 select.inline{border:1px solid #c9c4ba;padding:6px 8px;font:400 13px/1.2 var(--ui);background:#fff;border-radius:0}
 @media (max-width:420px){.exrow{grid-template-columns:1fr 46px 60px;}.exrow .ld,.exrow .x{grid-column:auto}}
+
+/* library + picker */
+.cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.cats .chip{cursor:pointer;white-space:nowrap;background:#fff}
+.cats .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.libsearch,.pk input[type=search]{border:1px solid #c9c4ba;padding:10px 12px;font:400 16px/1.2 var(--ui);border-radius:0;width:100%}
+.picker{position:fixed;inset:0;background:rgba(21,19,15,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.pk{background:var(--paper);width:100%;max-width:480px;max-height:88vh;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:10px;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.pklist{overflow-y:auto;border-top:1px solid var(--rule);min-height:120px}
+.pkrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.pkrow input{width:20px;height:20px;margin-top:3px;accent-color:var(--rust);flex:0 0 auto}
+.pk .btn[disabled]{opacity:.5}

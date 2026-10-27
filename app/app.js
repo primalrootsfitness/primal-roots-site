@@ -124,6 +124,9 @@
       if (D.workouts.length) {
         var ex = await q(sb.from('exercises').select('*').in('workout_id', D.workouts.map(function (w) { return w.id; })).order('position'));
         ex.forEach(function (e) { (D.exercises[e.workout_id] = D.exercises[e.workout_id] || []).push(e); });
+        var libIds = ex.map(function (e) { return e.library_id; }).filter(Boolean);
+        D.lib = {};
+        if (libIds.length) { try { (await q(sb.from('exercise_library').select('id,video_url,cues').in('id', libIds))).forEach(function (l) { D.lib[l.id] = l; }); } catch (e) { console.warn(e); } }
       }
     }
     D.todayCheckin = D.checkins.find(function (c) { return c.day === TODAY; }) || null;
@@ -189,8 +192,9 @@
           var k = e.id + '_' + s, lg = D.logs[k] || {}, draft = (S.drafts || {})[k] || {};
           sets += '<div class="set"><span>Set ' + s + '</span><input aria-label="Load, set ' + s + '" value="' + esc(draft.load != null ? draft.load : lg.load != null ? lg.load : (e.load || '')) + '" data-dl="' + k + '" data-f="load"><input aria-label="Reps, set ' + s + '" value="' + esc(draft.reps != null ? draft.reps : lg.reps != null ? lg.reps : (e.reps || '')) + '" data-dl="' + k + '" data-f="reps"><button class="done" aria-label="Mark set ' + s + ' done" aria-pressed="' + (lg.done ? 'true' : 'false') + '" data-act="set" data-ex="' + e.id + '" data-n="' + s + '">' + ICON.check + '</button></div>';
         }
-        var thumb = e.video_url ? '<a class="thumb" href="' + esc(e.video_url) + '" target="_blank" rel="noopener" style="text-decoration:none">Watch<br>demo</a>' : '<div class="thumb">Demo<br>soon</div>';
-        return '<div class="ex"><div class="exhead">' + thumb + '<div class="exbody"><b>' + esc(e.name) + '</b><span class="muted small">' + (e.sets || 1) + ' × ' + esc(e.reps || '') + (e.load ? ' · ' + esc(e.load) : '') + '</span>' + (e.detail ? '<span class="small">' + esc(e.detail) + '</span>' : '') + '</div></div><div class="sets"><div class="set"><span></span><span>Load</span><span>Reps</span><span></span></div>' + sets + '</div></div>';
+        var L = (D.lib || {})[e.library_id] || {}, vid = e.video_url || L.video_url, cue = e.detail || L.cues;
+        var thumb = vid ? '<a class="thumb" href="' + esc(vid) + '" target="_blank" rel="noopener" style="text-decoration:none">Watch<br>demo</a>' : '<div class="thumb">Demo<br>soon</div>';
+        return '<div class="ex"><div class="exhead">' + thumb + '<div class="exbody"><b>' + esc(e.name) + '</b><span class="muted small">' + (e.sets || 1) + ' × ' + esc(e.reps || '') + (e.load ? ' · ' + esc(e.load) : '') + '</span>' + (cue ? '<span class="small">' + esc(cue) + '</span>' : '') + '</div></div><div class="sets"><div class="set"><span></span><span>Load</span><span>Reps</span><span></span></div>' + sets + '</div></div>';
       }).join('') +
       '<div class="fld"><label for="wnote">Notes for ' + COACH.name + '</label><textarea id="wnote" rows="2" placeholder="How did it feel? Anything hurt?"></textarea></div>' +
       (isDone(id) ? '<p class="ok">Completed this week ✓</p>' : '<button class="btn block" data-act="complete" data-id="' + id + '">Finish workout</button>');
@@ -256,8 +260,13 @@
       q(sb.from('sessions').select('*').gte('starts_at', new Date(MONTH + 'T00:00:00').toISOString()).order('starts_at')),
       q(sb.from('payments').select('*').eq('month', MONTH)),
       q(sb.from('checkins').select('client_id,day').order('day', { ascending: false }).limit(1000)),
-      q(sb.from('messages').select('*').order('created_at').limit(2000))
+      q(sb.from('messages').select('*').order('created_at').limit(2000)),
+      q(sb.from('exercise_library').select('*').order('category').order('name')).catch(function () { return []; }),
+      q(sb.from('workout_templates').select('*').order('name')).catch(function () { return []; }),
+      q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; })
     ]);
+    D.library = res[5]; D.templates = res[6]; D.tplEx = {};
+    res[7].forEach(function (e) { (D.tplEx[e.template_id] = D.tplEx[e.template_id] || []).push(e); });
     D.clients = res[0]; D.sessions = res[1]; D.payments = res[2];
     D.lastCheckin = {}; res[3].forEach(function (c) { if (!D.lastCheckin[c.client_id]) D.lastCheckin[c.client_id] = c.day; });
     D.threads = {}; D.unread = {};
@@ -400,13 +409,14 @@
           '<label class="opt"><input type="checkbox" data-w="in_person"' + (w.in_person ? ' checked' : '') + '><span>In-person session</span></label>' +
           '<div class="exrow tag"><span>Exercise</span><span>Sets</span><span>Reps</span><span class="ld">Load</span><span></span></div>' +
           ex.map(function (e) { return exRow(e); }).join('') +
-          '<div data-newex></div><div class="row"><button class="btn ghost mini" data-act="addexrow">+ Exercise</button><button class="btn mini" data-act="saveworkout" data-id="' + w.id + '">Save workout</button></div><button class="x" style="width:auto;padding:0 10px;justify-self:end" data-act="delworkout" data-id="' + w.id + '">Delete workout</button></div>';
+          '<div data-newex></div><div class="row" style="flex-wrap:wrap"><button class="btn mini" data-act="pick">+ From library</button><button class="btn ghost mini" data-act="addexrow">+ Blank</button><button class="btn mini gold" data-act="saveworkout" data-id="' + w.id + '">Save workout</button></div><div class="row"><button class="x" style="width:auto;padding:0 10px" data-act="savetpl" data-id="' + w.id + '">Save as template</button><button class="x" style="width:auto;padding:0 10px" data-act="delworkout" data-id="' + w.id + '">Delete workout</button></div></div>';
       }).join('') +
-      '<button class="btn ghost block" data-act="addworkout">+ Add workout</button>';
+      '<button class="btn ghost block" data-act="addworkout">+ Add blank workout</button>' +
+      ((S.data.templates || []).length ? '<div class="ed"><p class="label">Add a workout from a template</p><select id="tpl_pick">' + S.data.templates.map(function (t) { return '<option value="' + t.id + '">' + esc(t.name) + ' (' + ((S.data.tplEx[t.id] || []).length) + ' exercises)</option>'; }).join('') + '</select><button class="btn mini" data-act="applytpl">Add to this program</button></div>' : '<p class="muted small">Tip: save a workout as a template to reuse it for other clients in one tap.</p>');
   }
   function exRow(e) {
     e = e || {};
-    return '<div class="exgroup" data-eid="' + (e.id || '') + '" style="display:grid;gap:4px"><div class="exrow"><input aria-label="Exercise name" data-e="name" value="' + esc(e.name || '') + '" placeholder="Exercise"><input aria-label="Sets" data-e="sets" inputmode="numeric" value="' + esc(e.sets || 3) + '"><input aria-label="Reps" data-e="reps" value="' + esc(e.reps || '') + '" placeholder="10"><input class="ld" aria-label="Load" data-e="load" value="' + esc(e.load || '') + '" placeholder="16 kg"><button class="x" aria-label="Remove exercise" data-act="rmex">×</button></div>' +
+    return '<div class="exgroup" data-eid="' + (e.id || '') + '" data-lib="' + esc(e.library_id || '') + '" style="display:grid;gap:4px"><div class="exrow"><input aria-label="Exercise name" data-e="name" value="' + esc(e.name || '') + '" placeholder="Exercise"><input aria-label="Sets" data-e="sets" inputmode="numeric" value="' + esc(e.sets || 3) + '"><input aria-label="Reps" data-e="reps" value="' + esc(e.reps || '') + '" placeholder="10"><input class="ld" aria-label="Load" data-e="load" value="' + esc(e.load || '') + '" placeholder="16 kg"><button class="x" aria-label="Remove exercise" data-act="rmex">×</button></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input style="border:1px solid #c9c4ba;padding:7px;font-size:13px;min-width:0" aria-label="Coaching cue" data-e="detail" value="' + esc(e.detail || '') + '" placeholder="Coaching cue"><input style="border:1px solid #c9c4ba;padding:7px;font-size:13px;min-width:0" aria-label="Demo video link" data-e="video_url" value="' + esc(e.video_url || '') + '" placeholder="Demo video link (optional)"></div></div>';
   }
   function nutritionEditor(d) {
@@ -436,9 +446,94 @@
     }).join('') + '</div>' : '<div class="empty">Add a client to start messaging.</div>');
   }
 
+
+  /* ---------- exercise library ---------- */
+  var CATS = ['Feet & ankles', 'Legs', 'Chest', 'Back', 'Shoulders', 'Arms', 'Core', 'Plyos', 'Rotation', 'Static holds', 'Carries', 'Mobility', 'Conditioning'];
+  function libMatches(e, f, qy) { return (!f || e.category === f) && (!qy || (e.name + ' ' + (e.equipment || '') + ' ' + (e.cues || '')).toLowerCase().indexOf(qy) > -1); }
+  function coachLibrary() {
+    var D = S.data, lib = D.library || [], f = S.libCat || '', qy = (S.libQ || '').toLowerCase();
+    var list = lib.filter(function (e) { return libMatches(e, f, qy); });
+    var withVid = lib.filter(function (e) { return e.video_url; }).length;
+    return '<div class="row"><div><p class="label">' + lib.length + ' exercises · ' + withVid + ' with video</p><h2>Library</h2></div><button class="btn mini" data-act="newlib">+ New</button></div>' +
+      '<div class="seg" role="group" style="grid-template-columns:1fr 1fr"><button aria-pressed="' + (S.libView !== 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="ex">Exercises</button><button aria-pressed="' + (S.libView === 'tpl' ? 'true' : 'false') + '" data-act="libview" data-v="tpl">Templates (' + (D.templates || []).length + ')</button></div>' +
+      (S.libView === 'tpl' ? templatesList() :
+      '<input id="libq" class="libsearch" type="search" placeholder="Search exercises" value="' + esc(S.libQ || '') + '" aria-label="Search exercises">' +
+      '<div class="cats"><button class="chip' + (!f ? ' on' : '') + '" data-act="libcat" data-v="">All</button>' + CATS.map(function (c) { var n = lib.filter(function (e) { return e.category === c; }).length; return n ? '<button class="chip' + (f === c ? ' on' : '') + '" data-act="libcat" data-v="' + esc(c) + '">' + esc(c) + ' ' + n + '</button>' : ''; }).join('') + '</div>' +
+      '<div class="list">' + (list.length ? list.map(function (e) { return '<button class="li tap" data-act="editlib" data-id="' + e.id + '"><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + (e.equipment ? ' · ' + esc(e.equipment) : '') + ' · ' + (e.default_sets || '') + ' × ' + esc(e.default_reps || '') + '</span></span>' + (e.video_url ? '<span class="chip ok">Video</span>' : '<span class="chip">No video</span>') + '</button>'; }).join('') : '<p class="muted small" style="padding:12px 0">' + (lib.length ? 'No exercises match.' : 'Your library is empty. Run the library setup code in Supabase, or add exercises with + New.') + '</p>') + '</div>' +
+      '<button class="btn ghost block" data-act="libimport">Import from spreadsheet</button>');
+  }
+  function libForm() {
+    var e = (S.data.library || []).find(function (x) { return x.id === S.libEditId; }) || {};
+    return '<div><p class="label">' + (e.id ? 'Edit exercise' : 'New exercise') + '</p><h2>' + esc(e.name || 'New exercise') + '</h2></div><div class="form">' +
+      '<div class="fld"><label for="lb_name">Name *</label><input id="lb_name" value="' + esc(e.name || '') + '"></div>' +
+      '<div class="two"><div class="fld"><label for="lb_cat">Section *</label><select id="lb_cat">' + CATS.map(function (c) { return '<option' + (c === (e.category || S.libCat) ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></div><div class="fld"><label for="lb_eq">Equipment</label><input id="lb_eq" value="' + esc(e.equipment || '') + '" placeholder="Kettlebell"></div></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><div class="fld"><label for="lb_sets">Sets</label><input id="lb_sets" inputmode="numeric" value="' + esc(e.default_sets || 3) + '"></div><div class="fld"><label for="lb_reps">Reps</label><input id="lb_reps" value="' + esc(e.default_reps || '') + '" placeholder="10"></div><div class="fld"><label for="lb_load">Load</label><input id="lb_load" value="' + esc(e.default_load || '') + '" placeholder="16 kg"></div></div>' +
+      '<div class="fld"><label for="lb_cues">Coaching cues</label><textarea id="lb_cues" rows="3">' + esc(e.cues || '') + '</textarea></div>' +
+      '<div class="fld"><label for="lb_vid">Demo video link</label><input id="lb_vid" value="' + esc(e.video_url || '') + '" placeholder="Unlisted YouTube or Google Drive link"></div>' +
+      '<button class="btn block" data-act="savelib" data-id="' + (e.id || '') + '">Save exercise</button>' +
+      (e.id ? '<button class="x" style="width:auto;padding:0 10px;justify-self:start" data-act="dellib" data-id="' + e.id + '">Delete from library</button>' : '') + '</div>';
+  }
+  function importScreen() {
+    return '<div><p class="label">Bulk add</p><h2>Import exercises</h2><p class="muted small">In Google Sheets or Excel, select your rows (with or without the header row), copy, and paste below. Columns in this order:</p></div>' +
+      '<div class="card small"><b>Name · Section · Equipment · Sets · Reps · Load · Cues · Video link</b><span class="muted">Section must be one of: ' + esc(CATS.join(', ')) + '. Empty cells are fine.</span></div>' +
+      '<div class="fld"><label for="imp">Paste rows</label><textarea id="imp" rows="10" placeholder="Goblet squat	Legs	Kettlebell	3	10	16 kg	Heels down, chest tall	https://youtu.be/..."></textarea></div>' +
+      '<p class="err" id="imperr" hidden></p><button class="btn block" data-act="doimport">Import</button>';
+  }
+  function templatesList() {
+    var D = S.data, t = D.templates || [];
+    return '<button class="btn block" data-act="newtpl">+ New template</button>' +
+      (t.length ? '<div class="list">' + t.map(function (x) { var ex = D.tplEx[x.id] || []; return '<button class="li tap" data-act="edittpl" data-id="' + x.id + '"><span><b>' + esc(x.name) + '</b><br><span class="small muted">' + ex.length + ' exercises' + (x.focus ? ' · ' + esc(x.focus) : '') + '</span></span><span class="chip' + (x.in_person ? ' solid' : '') + '">' + (x.in_person ? 'In person' : 'Own') + '</span></button>'; }).join('') + '</div>' : '<div class="empty">No templates yet. Build one here, or open any client workout and tap "Save as template".</div>');
+  }
+  function templateEditor() {
+    var D = S.data, t = (D.templates || []).find(function (x) { return x.id === S.tplId; }) || {}, ex = t.id ? (D.tplEx[t.id] || []) : [];
+    return '<div><p class="label">' + (t.id ? 'Edit template' : 'New template') + '</p><h2>' + esc(t.name || 'New template') + '</h2></div>' +
+      '<div class="ed" id="tplcard"><div class="fld"><label for="tp_name">Template name *</label><input id="tp_name" value="' + esc(t.name || '') + '" placeholder="Feet + Hinge A"></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 70px;gap:8px"><input id="tp_focus" aria-label="Focus" value="' + esc(t.focus || '') + '" placeholder="Focus, e.g. Lower body"><input id="tp_min" aria-label="Minutes" inputmode="numeric" value="' + esc(t.minutes || '') + '" placeholder="Min"></div>' +
+      '<label class="opt"><input type="checkbox" id="tp_ip"' + (t.in_person !== false ? ' checked' : '') + '><span>In-person session</span></label>' +
+      '<div class="exrow tag"><span>Exercise</span><span>Sets</span><span>Reps</span><span class="ld">Load</span><span></span></div>' +
+      ex.map(function (e) { return exRow(e); }).join('') + '<div data-newex></div>' +
+      '<div class="row" style="flex-wrap:wrap"><button class="btn mini" data-act="pick">+ From library</button><button class="btn ghost mini" data-act="addexrow">+ Blank</button><button class="btn mini gold" data-act="savetplform" data-id="' + (t.id || '') + '">Save template</button></div>' +
+      (t.id ? '<button class="x" style="width:auto;padding:0 10px;justify-self:start" data-act="deltpl" data-id="' + t.id + '">Delete template</button>' : '') + '</div>';
+  }
+  function libRowToEx(e) { return { name: e.name, sets: e.default_sets || 3, reps: e.default_reps || '', load: e.default_load || '', detail: e.cues || '', video_url: e.video_url || '', library_id: e.id }; }
+  function openPicker(container) {
+    var lib = S.data.library || [], sel = {}, cat = '', qy = '';
+    var ov = document.createElement('div'); ov.className = 'picker'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Pick exercises');
+    function render() {
+      var list = lib.filter(function (e) { return libMatches(e, cat, qy); }), n = Object.keys(sel).length;
+      ov.innerHTML = '<div class="pk"><div class="row"><h3>Add from library</h3><button class="x" data-pk="close" aria-label="Close">×</button></div>' +
+        '<input type="search" data-pk="q" placeholder="Search" value="' + esc(qy) + '" aria-label="Search">' +
+        '<div class="cats"><button class="chip' + (!cat ? ' on' : '') + '" data-pk="cat" data-v="">All</button>' + CATS.map(function (c) { return lib.some(function (e) { return e.category === c; }) ? '<button class="chip' + (cat === c ? ' on' : '') + '" data-pk="cat" data-v="' + esc(c) + '">' + esc(c) + '</button>' : ''; }).join('') + '</div>' +
+        '<div class="pklist">' + (list.length ? list.map(function (e) { return '<label class="pkrow"><input type="checkbox" data-pk="sel" value="' + e.id + '"' + (sel[e.id] ? ' checked' : '') + '><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + ' · ' + (e.default_sets || '') + ' × ' + esc(e.default_reps || '') + (e.default_load ? ' · ' + esc(e.default_load) : '') + (e.video_url ? ' · video' : '') + '</span></span></label>'; }).join('') : '<p class="muted small">No exercises match. Add them in the Library tab.</p>') + '</div>' +
+        '<button class="btn block" data-pk="add"' + (n ? '' : ' disabled') + '>Add ' + (n || '') + ' exercise' + (n === 1 ? '' : 's') + '</button></div>';
+    }
+    ov.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-pk]'); if (!b) { if (e.target === ov) ov.remove(); return; }
+      var k = b.dataset.pk;
+      if (k === 'close') ov.remove();
+      else if (k === 'cat') { cat = b.dataset.v; render(); }
+      else if (k === 'add') { Object.keys(sel).forEach(function (id) { var le = lib.find(function (x) { return x.id === id; }); if (le) container.insertAdjacentHTML('beforeend', exRow(libRowToEx(le))); }); ov.remove(); toastLite('Added. Adjust sets and reps, then tap Save.'); }
+    });
+    ov.addEventListener('change', function (e) { if (e.target.dataset.pk === 'sel') { if (e.target.checked) sel[e.target.value] = 1; else delete sel[e.target.value]; render(); } });
+    ov.addEventListener('input', function (e) { if (e.target.dataset.pk === 'q') { qy = e.target.value.toLowerCase(); var pos = e.target.selectionStart; render(); var i = ov.querySelector('[data-pk="q"]'); i.focus(); i.setSelectionRange(pos, pos); } });
+    render(); document.body.appendChild(ov);
+  }
+  /* A toast that doesn't re-render the screen, so unsaved edits in open forms are kept. */
+  function toastLite(t) { var el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = t; document.body.appendChild(el); setTimeout(function () { el.remove(); }, 2200); }
+  function readExRows(card) {
+    var out = [], pos = 0;
+    card.querySelectorAll('.exgroup').forEach(function (gp) {
+      if (gp.dataset.remove === '1') return;
+      var ef = {}; gp.querySelectorAll('[data-e]').forEach(function (i) { ef[i.dataset.e] = i.value.trim(); });
+      if (!ef.name) return;
+      out.push({ name: ef.name, sets: +ef.sets || 1, reps: ef.reps || null, load: ef.load || null, detail: ef.detail || null, video_url: ef.video_url || null, library_id: gp.dataset.lib || null, position: pos++ });
+    });
+    return out;
+  }
+
   /* ---------- shell ---------- */
   var CLIENT_TABS = [['today', 'Today', 'today'], ['train', 'Train', 'train'], ['food', 'Food', 'food'], ['chat', 'Chat', 'chat'], ['me', 'Me', 'me']];
-  var COACH_TABS = [['today', 'Today', 'today'], ['clients', 'Clients', 'clients'], ['schedule', 'Schedule', 'cal'], ['inbox', 'Inbox', 'chat']];
+  var COACH_TABS = [['today', 'Today', 'today'], ['clients', 'Clients', 'clients'], ['library', 'Library', 'train'], ['schedule', 'Schedule', 'cal'], ['inbox', 'Inbox', 'chat']];
   function loginScreen() {
     return '<div class="login">' + MARK + '<div><p class="label">Primal Roots</p><h2>Sign in</h2><p class="muted">Enter your email and we\'ll send you a sign-in link. No password needed.</p></div>' +
       (S.linkSent ? '<div class="card"><p class="ok">Check your email.</p><p>We sent a sign-in link to <b>' + esc(S.linkSent) + '</b>. Open it on this device. It can take a minute, and check spam if you don\'t see it.</p><button class="btn ghost" data-act="resetlogin">Use a different email</button></div>'
@@ -448,9 +543,9 @@
   function title() {
     if (S.role !== 'coach') { if (S.sub === 'workout') return 'Workout'; if (S.sub === 'checkin') return 'Check-in'; if (S.sub === 'addfood') return 'Food log';
       return { today: 'Primal Roots', train: 'Train', food: 'Food', chat: COACH.name, me: 'My plan' }[S.tab]; }
-    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client';
+    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template';
     if (S.tab === 'inbox' && S.chatWith) { var c = cById(S.chatWith); return c ? c.full_name : 'Chat'; }
-    return { today: 'Primal Roots', clients: 'Clients', schedule: 'Schedule', inbox: 'Inbox' }[S.tab];
+    return { today: 'Primal Roots', clients: 'Clients', library: 'Library', schedule: 'Schedule', inbox: 'Inbox' }[S.tab];
   }
   function draw() {
     if (S.loading) { root.innerHTML = '<div class="loading">Loading…</div>'; return; }
@@ -460,7 +555,8 @@
     else if (!isCoach) body = S.sub === 'workout' ? workoutDetail(S.subId) : S.sub === 'checkin' ? checkinScreen() : S.sub === 'addfood' ? addFood() :
       ({ today: clientToday, train: clientTrain, food: clientFood, chat: function () { return chatView(S.data.messages, false, S.data.client.id); }, me: clientMe })[S.tab]();
     else body = S.sub === 'client' ? coachClient() : S.sub === 'addclient' ? '<div><p class="label">New client</p><h2>Add client</h2></div>' + clientForm(null) :
-      ({ today: coachToday, clients: coachClients, schedule: coachSchedule, inbox: coachInbox })[S.tab]();
+      S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'tpledit' ? templateEditor() :
+      ({ today: coachToday, clients: coachClients, library: coachLibrary, schedule: coachSchedule, inbox: coachInbox })[S.tab]();
     var back = !!S.sub || (isCoach && S.tab === 'inbox' && S.chatWith);
     var tabs = isCoach ? COACH_TABS : CLIENT_TABS, showTabs = isCoach || S.data.client;
     root.innerHTML = '<header class="top">' + (back ? '<button class="back" data-act="back">← Back</button>' : MARK) + '<h1>' + esc(title()) + '</h1></header>' +
@@ -501,6 +597,7 @@
   });
   root.addEventListener('input', function (e) {
     var t = e.target;
+    if (t.id === 'libq') { S.libQ = t.value; var pos = t.selectionStart; draw(); var li = document.getElementById('libq'); if (li) { li.focus(); li.setSelectionRange(pos, pos); } return; }
     if (t.dataset.dl) { S.drafts = S.drafts || {}; (S.drafts[t.dataset.dl] = S.drafts[t.dataset.dl] || {})[t.dataset.f] = t.value; }
   });
   root.addEventListener('change', async function (e) {
@@ -621,6 +718,72 @@
           await q(sb.from('workouts').delete().eq('id', d.id));
           D.detail.workouts = D.detail.workouts.filter(function (w) { return w.id !== d.id; }); toast('Workout deleted.'); return draw();
         }
+        case 'libview': S.libView = d.v; return draw();
+        case 'libcat': S.libCat = d.v; return draw();
+        case 'newlib': S.sub = 'libedit'; S.libEditId = null; window.scrollTo(0, 0); return draw();
+        case 'editlib': S.sub = 'libedit'; S.libEditId = d.id; window.scrollTo(0, 0); return draw();
+        case 'libimport': S.sub = 'libimport'; window.scrollTo(0, 0); return draw();
+        case 'savelib': {
+          var lrow = { name: val('lb_name'), category: val('lb_cat'), equipment: val('lb_eq') || null, default_sets: +val('lb_sets') || 3, default_reps: val('lb_reps') || null, default_load: val('lb_load') || null, cues: val('lb_cues') || null, video_url: val('lb_vid') || null };
+          if (!lrow.name) return toast('Give the exercise a name.');
+          var lsaved = d.id ? await q(sb.from('exercise_library').update(lrow).eq('id', d.id).select().single()) : await q(sb.from('exercise_library').insert(lrow).select().single());
+          D.library = (D.library || []).filter(function (x) { return x.id !== lsaved.id; }).concat([lsaved]).sort(function (a, b) { return a.category.localeCompare(b.category) || a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; return toast('Exercise saved.');
+        }
+        case 'dellib': {
+          if (t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to delete'; return; }
+          await q(sb.from('exercise_library').delete().eq('id', d.id)); D.library = D.library.filter(function (x) { return x.id !== d.id; }); S.sub = null; return toast('Deleted. Client workouts keep their copy.');
+        }
+        case 'doimport': {
+          var raw = document.getElementById('imp').value, rows = [], bad = [];
+          raw.split(/\r?\n/).forEach(function (line, i) {
+            if (!line.trim()) return;
+            var c = line.indexOf('\t') > -1 ? line.split('\t') : line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function (x) { return x.replace(/^"|"$/g, ''); });
+            c = c.map(function (x) { return (x || '').trim(); });
+            if (/^name$/i.test(c[0])) return;
+            var cat = CATS.find(function (k) { return k.toLowerCase() === (c[1] || '').toLowerCase(); });
+            if (!c[0] || !cat) { bad.push(i + 1); return; }
+            rows.push({ name: c[0], category: cat, equipment: c[2] || null, default_sets: +c[3] || 3, default_reps: c[4] || null, default_load: c[5] || null, cues: c[6] || null, video_url: c[7] || null });
+          });
+          var ie = document.getElementById('imperr');
+          if (!rows.length) { ie.textContent = 'Nothing to import. Check that each row has a name and a valid section.'; ie.hidden = false; return; }
+          var ins2 = await q(sb.from('exercise_library').insert(rows).select());
+          D.library = (D.library || []).concat(ins2).sort(function (a, b) { return a.category.localeCompare(b.category) || a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; return toast('Imported ' + ins2.length + ' exercises' + (bad.length ? '. Skipped rows ' + bad.join(', ') + ' (missing name or section).' : '.'));
+        }
+        case 'pick': { var cont = t.closest('.ed').querySelector('[data-newex]'); if (!(D.library || []).length) return toastLite('Your library is empty. Add exercises in the Library tab first.'); openPicker(cont); return; }
+        case 'newtpl': S.sub = 'tpledit'; S.tplId = null; window.scrollTo(0, 0); return draw();
+        case 'edittpl': S.sub = 'tpledit'; S.tplId = d.id; window.scrollTo(0, 0); return draw();
+        case 'savetplform': {
+          var tname = val('tp_name'); if (!tname) return toastLite('Name the template first.');
+          var trow = { name: tname, focus: val('tp_focus') || null, minutes: +val('tp_min') || null, in_person: checked('tp_ip') };
+          var texs0 = readExRows(document.getElementById('tplcard'));
+          var tsaved = d.id ? await q(sb.from('workout_templates').update(trow).eq('id', d.id).select().single()) : await q(sb.from('workout_templates').insert(trow).select().single());
+          var texs = texs0.map(function (r) { return Object.assign(r, { template_id: tsaved.id }); });
+          await q(sb.from('template_exercises').delete().eq('template_id', tsaved.id));
+          D.tplEx[tsaved.id] = texs.length ? await q(sb.from('template_exercises').insert(texs).select()) : [];
+          D.templates = (D.templates || []).filter(function (x) { return x.id !== tsaved.id; }).concat([tsaved]).sort(function (a, b) { return a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; S.libView = 'tpl'; return toast('Template saved.');
+        }
+        case 'deltpl': {
+          if (t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to delete'; return; }
+          await q(sb.from('workout_templates').delete().eq('id', d.id)); D.templates = D.templates.filter(function (x) { return x.id !== d.id; }); S.sub = null; return toast('Template deleted.');
+        }
+        case 'savetpl': {
+          var wk = D.detail.workouts.find(function (w) { return w.id === d.id; }), wex = D.detail.exercises[d.id] || [];
+          if (!wex.length) return toastLite('Save the workout with exercises first.');
+          var nt = await q(sb.from('workout_templates').insert({ name: wk.title, focus: wk.focus, minutes: wk.minutes, in_person: wk.in_person }).select().single());
+          D.tplEx[nt.id] = await q(sb.from('template_exercises').insert(wex.map(function (e, i) { return { template_id: nt.id, library_id: e.library_id || null, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }; })).select());
+          D.templates = (D.templates || []).concat([nt]).sort(function (a, b) { return a.name.localeCompare(b.name); });
+          return toastLite('Saved "' + wk.title + '" as a template.');
+        }
+        case 'applytpl': {
+          var tid = val('tpl_pick'), tp = D.templates.find(function (x) { return x.id === tid; }), tex = D.tplEx[tid] || [];
+          var nw = await q(sb.from('workouts').insert({ program_id: D.detail.program.id, client_id: D.detail.client.id, position: D.detail.workouts.length, title: tp.name, focus: tp.focus, minutes: tp.minutes, in_person: tp.in_person }).select().single());
+          D.detail.workouts.push(nw);
+          D.detail.exercises[nw.id] = tex.length ? await q(sb.from('exercises').insert(tex.map(function (e, i) { return { workout_id: nw.id, client_id: D.detail.client.id, library_id: e.library_id, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }; })).select()) : [];
+          toast('Added "' + tp.name + '". Adjust it for this client if needed.'); return draw();
+        }
         case 'saveworkout': {
           var card = t.closest('.ed'), wf = {};
           card.querySelectorAll('[data-w]').forEach(function (i) { wf[i.dataset.w] = i.type === 'checkbox' ? i.checked : i.value.trim(); });
@@ -631,7 +794,7 @@
             var ef = {}; gp.querySelectorAll('[data-e]').forEach(function (i) { ef[i.dataset.e] = i.value.trim(); });
             if (gp.dataset.remove === '1') { ops.push(q(sb.from('exercises').delete().eq('id', gp.dataset.eid))); return; }
             if (!ef.name) return;
-            var rowx = { name: ef.name, sets: +ef.sets || 1, reps: ef.reps || null, load: ef.load || null, detail: ef.detail || null, video_url: ef.video_url || null, position: pos++ };
+            var rowx = { name: ef.name, sets: +ef.sets || 1, reps: ef.reps || null, load: ef.load || null, detail: ef.detail || null, video_url: ef.video_url || null, library_id: gp.dataset.lib || null, position: pos++ };
             if (gp.dataset.eid) ops.push(q(sb.from('exercises').update(rowx).eq('id', gp.dataset.eid)));
             else ops.push(q(sb.from('exercises').insert(Object.assign(rowx, { workout_id: d.id, client_id: D.detail.client.id }))));
           });

@@ -258,3 +258,4 @@ footer p{max-width:62ch}
 .legal h2{font-size:28px;margin-top:22px}
 .legal ul{margin:0;padding-left:20px;display:grid;gap:8px}
 .legal a{color:var(--rust)}
+footer p.sms a{color:inherit;text-decoration:underline}

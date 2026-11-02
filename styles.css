@@ -254,3 +254,7 @@ footer p{max-width:62ch}
 .nav{display:flex;justify-content:space-between;gap:12px;margin-top:16px;border-top:1px solid var(--rule);padding-top:20px}
 .nav .btn[disabled]{opacity:.6;cursor:wait}
 .done{display:grid;gap:16px;padding-block:24px}
+.legal{max-width:760px;display:grid;gap:14px}
+.legal h2{font-size:28px;margin-top:22px}
+.legal ul{margin:0;padding-left:20px;display:grid;gap:8px}
+.legal a{color:var(--rust)}

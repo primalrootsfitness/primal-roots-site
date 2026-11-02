@@ -51,6 +51,7 @@
       { id: 'dob', type: 'date', label: 'Date of birth', req: true },
       { id: 'phone', type: 'text', label: 'Phone', req: true, input: 'tel', ac: 'tel' },
       { id: 'email', type: 'text', label: 'Email', req: true, input: 'email', ac: 'email' },
+      { id: 'sms_ok', type: 'check', label: 'Optional: Yes, Primal Roots may text me at this number about scheduling, reminders and coaching check-ins. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. Not required to train. Terms and privacy: primalroots.fit/terms.html and primalroots.fit/privacy.html' },
       { id: 'address', type: 'text', label: 'Address', ac: 'street-address' },
       { id: 'occupation', type: 'text', label: 'Occupation' },
       { id: 'height', type: 'text', label: 'Height', req: true, half: true },

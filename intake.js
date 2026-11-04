@@ -6,20 +6,20 @@
 
   var YN = ['Yes', 'No'];
   var WAIVER = [
-    ['1. Purpose of the program.', 'I am voluntarily enrolling in a coaching program with Primal Roots. The program may include strength and conditioning (including kettlebell and bodyweight training), mobility and fascia-focused work, corrective exercise, cardiovascular conditioning, movement and posture assessments, and general nutrition and lifestyle coaching. Sessions may take place in a private home gym or outdoors.'],
+    ['1. Purpose of the program.', 'I am voluntarily enrolling in a coaching program with Primal Roots. The program may include strength and conditioning (including kettlebell and bodyweight training), mobility and fascia-focused work, corrective exercise, cardiovascular conditioning, movement and posture assessments, and general nutrition and lifestyle coaching. Coaching is delivered online. I will do my workouts on my own, at a location and with equipment I choose, without my coach physically present.'],
     ['2. Fitness assessments.', 'Before and during the program, my coach may assess my posture, movement, strength, flexibility, endurance, body measurements and body composition. I may decline any assessment, exercise or service, and stop at any time for any reason.'],
     ['Benefits.', 'Regular exercise can improve heart and lung fitness, strength, mobility, posture, body composition, blood pressure, blood sugar control, energy, sleep and mood. It can also reduce pain and the risk of chronic disease. Individual results vary.'],
     ["What's normal during exercise.", 'Expect a faster heart rate, heavier breathing, sweating, warmth, muscle fatigue and a burning feeling in working muscles. Mild muscle soreness for 1–3 days after a session is normal, especially early on. Sharp or joint pain, chest pain, dizziness, nausea or trouble breathing are not normal — stop and tell your coach right away.'],
-    ['3. Risks.', 'I understand that exercise carries risks. These include muscle soreness, strains, sprains, joint injury, fractures, dizziness, fainting, abnormal blood pressure, irregular heartbeat and, in rare cases, heart attack, stroke or death. Risks also include injury from equipment, falling objects, slips and falls, and travel to and from sessions.'],
-    ['4. My responsibilities.', 'I agree to:', ['Answer every question on the health screening forms completely and truthfully.', 'Tell my coach right away about any change in my health, medications, injuries or pregnancy status.', 'Tell my coach immediately if I feel pain, chest discomfort, shortness of breath, dizziness, nausea or anything unusual during exercise, and stop exercising.', 'Get clearance from my physician if my coach asks me to, before starting or continuing.', 'Follow instructions on proper form, equipment use and safety.']],
+    ['3. Risks.', 'I understand that exercise carries risks. These include muscle soreness, strains, sprains, joint injury, fractures, dizziness, fainting, abnormal blood pressure, irregular heartbeat and, in rare cases, heart attack, stroke or death. Risks also include injury from equipment, falling objects, slips and falls, and training on my own without in-person supervision, including following programs, videos and written instructions.'],
+    ['4. My responsibilities.', 'I agree to:', ['Answer every question on the health screening forms completely and truthfully.', 'Tell my coach right away about any change in my health, medications, injuries or pregnancy status.', 'Tell my coach immediately if I feel pain, chest discomfort, shortness of breath, dizziness, nausea or anything unusual during exercise, and stop exercising.', 'Get clearance from my physician if my coach asks me to, before starting or continuing.', 'Follow instructions on proper form, equipment use and safety.', 'Make sure my training space is safe and clear, my equipment is in good condition, and I train within my abilities.', 'Stop any exercise I am unsure how to do safely and ask my coach before continuing.']],
     ['5. Not medical care.', 'My coach is a certified personal trainer, not a physician, physical therapist, dietitian or other licensed healthcare provider. Coaching does not diagnose, treat or cure any disease or condition. Nutrition and lifestyle guidance is general and educational. It does not replace advice from my doctor. I will not stop or change any prescribed medication or treatment based on coaching without talking to my doctor.'],
     ['6. Results.', 'I understand results depend on my own effort, consistency, genetics and health. No specific outcome is promised.'],
-    ['7. Emergencies.', 'In an emergency, I authorize my coach to call 911 and to give first aid or CPR. I accept responsibility for any resulting medical costs.'],
+    ['7. Emergencies.', 'Because my coach is not with me when I train, I am responsible for getting emergency help for myself if I need it. If an emergency happens during a video call, I authorize my coach to call 911 on my behalf. I accept responsibility for any resulting medical costs.'],
     ['8. Assumption of risk.', 'I knowingly and voluntarily accept all risks of participating, both known and unknown, even if they arise from the ordinary negligence of Primal Roots.'],
     ['9. Release and waiver.', 'To the fullest extent allowed by Oregon law, I release, waive and agree not to sue ' + LLC_NAME + ', Primal Roots, its owners, coaches, employees and agents for any injury, illness, death, loss or damage arising from my participation, including claims based on their ordinary negligence. This release does not cover gross negligence or intentional misconduct. It binds me, my heirs, executors and assigns.'],
     ['10. Indemnity.', 'I agree to cover any costs, including legal fees, that Primal Roots incurs because of a claim brought by me or on my behalf in breach of this release.'],
     ['11. Confidentiality.', 'My health information will be kept confidential. It will only be shared with my physician or emergency responders when needed for my safety, or with my written permission.'],
-    ['12. Photos and video (optional).', 'Primal Roots may record photos or video of my sessions for form review. Check one:'],
+    ['12. Photos and video (optional).', 'Primal Roots may receive and store photos and videos I send for form review and progress tracking. Check one:'],
   ];
   var WAIVER_END = [['13. Severability.', 'If any part of this agreement is found unenforceable, the rest stays in effect.']];
 
@@ -161,7 +161,7 @@
       { id: 'support', type: 'scale', label: 'How much support do you have from family and friends? (1–10)' },
       { id: 'obstacles', type: 'textarea', label: 'What could get in the way of sticking with the program?' },
       { id: 'coach_style', type: 'radio', label: 'How do you like to be coached?', options: ['Tough love', 'Encouragement', 'Data-driven', 'A mix'], inline: true },
-      { id: 'checkin', type: 'radio', label: 'How do you prefer check-ins?', options: ['Text', 'Call', 'App', 'In person'], inline: true },
+      { id: 'checkin', type: 'radio', label: 'How do you prefer check-ins?', options: ['App', 'Text', 'Video call'], inline: true },
       { id: 'anything', type: 'textarea', label: 'Anything else your coach should know?' }
     ] }
   ];
@@ -334,7 +334,7 @@
     fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
       .then(function () {
         try { localStorage.removeItem(STORE); } catch (e) {}
-        root.innerHTML = '<div class="done"><p class="label">Sent</p><h2>Thanks, ' + esc((values.name || '').split(' ')[0]) + '.</h2><p class="lede">Your forms are in. A copy is on its way to ' + esc(values.email) + '. I\'ll review your answers before your intro session.</p>' +
+        root.innerHTML = '<div class="done"><p class="label">Sent</p><h2>Thanks, ' + esc((values.name || '').split(' ')[0]) + '.</h2><p class="lede">Your forms are in. A copy is on its way to ' + esc(values.email) + '. I\'ll review your answers and get your program started.</p>' +
           (payload.parqFlag ? '<p class="note">Based on your answers, I\'ll reach out about a quick doctor\'s clearance before we train. We can still meet to talk through your goals and plan.</p>' : '') +
           '<p class="muted">Questions? Call or text 541-703-8179.</p><a class="btn ghost" href="index.html">Back to the home page</a></div>';
         window.scrollTo(0, 0);

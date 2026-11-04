@@ -149,3 +149,11 @@ select.inline{border:1px solid #c9c4ba;padding:6px 8px;font:400 13px/1.2 var(--u
 .hdots{display:flex;gap:3px}
 .hdots i{width:10px;height:10px;border:1px solid var(--ink);display:block}
 .hdots i.on{background:var(--rust);border-color:var(--rust)}
+.tabs.three{grid-template-columns:repeat(3,1fr)}
+.linkbtn{background:none;border:0;padding:4px 0 0;color:var(--rust);font:500 11px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;text-align:left;cursor:pointer;justify-self:start}
+.phs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.phs figure{margin:0;display:grid;gap:4px}
+.ph{width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--mist);border:1px solid var(--rule);display:block}
+.vid{width:100%;max-height:420px;background:#000;display:block}
+.reply{border-left:3px solid var(--rust);background:var(--mist);padding:10px 12px;display:grid;gap:4px}
+.reply p{margin:0}

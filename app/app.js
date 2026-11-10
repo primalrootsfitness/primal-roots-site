@@ -3,7 +3,7 @@
   'use strict';
   var SUPABASE_URL = 'https://rzlobdptknxstdsvgcuu.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_QU2hnK0GW7MYSp15iOwf_g_0eWjtjB5';
-  var COACH = { name: 'Wade', phone: '541-703-8179', email: 'wade@primalroots.fit', bookingLink: 'https://calendar.app.google/3cA5vLPcfc19vx5R9', callLink: 'https://calendar.app.google/MXGP5ihnuN8vnBzv5' };
+  var COACH = { name: 'Wade', phone: '541-703-8179', email: 'wade@primalroots.fit', bookingLink: 'https://calendar.app.google/3cA5vLPcfc19vx5R9' };
 
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } });
   var root = document.getElementById('app');
@@ -63,7 +63,7 @@
       S.profile = prof || { role: 'client', email: S.session.user.email };
       S.role = S.profile.role;
       S.tab = 'today'; S.sub = null;
-      if (S.role === 'coach') await loadCoach(); else { await loadClient(); if (S.data.client && isLibPlan(S.data.client)) S.tab = 'library'; }
+      if (S.role === 'coach') await loadCoach(); else await loadClient();
       subscribe();
     } catch (e) { fail(e); }
     S.loading = false; draw();
@@ -117,17 +117,9 @@
       q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; }),
       q(sb.from('habits').select('*').eq('active', true).order('position')).catch(function () { return []; }),
       q(sb.from('habit_logs').select('*').eq('client_id', cid).gte('day', WEEK_AGO)).catch(function () { return []; }),
-      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; }),
-      q(sb.from('weekly_checkins').select('*').eq('client_id', cid).order('week_of', { ascending: false }).limit(12)).catch(function () { return []; }),
-      q(sb.from('form_checks').select('*').eq('client_id', cid).order('created_at', { ascending: false }).limit(20)).catch(function () { return []; }),
-      q(sb.from('progress_photos').select('*').eq('client_id', cid).order('taken_on', { ascending: false }).limit(90)).catch(function () { return []; }),
-      q(sb.from('exercise_library').select('*').order('category').order('name')).catch(function () { return []; }),
-      q(sb.from('workout_templates').select('*').eq('shared', true).order('name')).catch(function () { return []; }),
-      q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; })
+      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; })
     ]);
     D.guide = res[11]; D.habits = res[12]; D.habitLogs = res[13]; D.foods = res[14];
-    D.weekly = res[15]; D.formChecks = res[16]; D.photos = res[17]; D.library = res[18]; D.sharedTpl = res[19]; D.sharedEx = {};
-    res[20].forEach(function (e) { (D.sharedEx[e.template_id] = D.sharedEx[e.template_id] || []).push(e); });
     D.program = res[0][0] || null; D.checkins = res[1]; D.nutrition = res[2]; D.food = res[3]; D.water = res[4] ? res[4].glasses : 0;
     D.messages = res[5]; D.sessions = res[6]; D.payments = res[7]; D.documents = res[8]; D.completions = res[9];
     D.logs = {}; res[10].forEach(function (l) { D.logs[l.exercise_id + '_' + l.set_number] = l; });
@@ -179,26 +171,23 @@
     var doneN = D.workouts.filter(function (x) { return isDone(x.id); }).length;
     var last = D.messages.slice(-1)[0];
     return '<div><p class="label">' + esc(fmtDay(NOW)) + '</p><h2>Good to see you, ' + esc(c.first_name || first(c.full_name)) + '.</h2></div>' +
-      (st.next ? '<div class="card dark"><p class="label">Next call with ' + COACH.name + '</p><h3>' + esc(fmtDay(st.next.starts_at)) + ' · ' + esc(fmtTime(st.next.starts_at)) + '</h3><p class="muted small">The video link is in your calendar invite.</p></div>'
-        : '<a class="card tap" href="' + COACH.bookingLink + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><p class="label">Coaching call</p><h3>Book your next call</h3><p class="muted small">Tap to pick a time with ' + COACH.name + '.</p></a>') +
-      (w ? '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><p class="label">Today\'s training</p><span class="chip' + (isDone(w.id) ? ' ok' : '') + '">' + (isDone(w.id) ? 'Done' : 'Up next') + '</span></div><h3>' + esc(w.title) + '</h3><p class="muted small">' + (D.exercises[w.id] || []).length + ' exercises' + (w.minutes ? ' · about ' + w.minutes + ' min' : '') + '</p></button>'
+      (st.next ? '<div class="card dark"><p class="label">Next session with ' + COACH.name + '</p><h3>' + esc(fmtDay(st.next.starts_at)) + ' · ' + esc(fmtTime(st.next.starts_at)) + '</h3><p class="muted small">I\'ll come to you. Have an 8×8 ft clear space ready, plus water.</p></div>'
+        : '<a class="card tap" href="' + COACH.bookingLink + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><p class="label">Next session</p><h3>Nothing booked yet</h3><p class="muted small">Tap to book a time with ' + COACH.name + '.</p></a>') +
+      (w ? '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><p class="label">Today\'s training</p><span class="chip' + (w.in_person ? ' solid' : '') + '">' + (isDone(w.id) ? 'Done' : w.in_person ? 'In person' : 'On your own') + '</span></div><h3>' + esc(w.title) + '</h3><p class="muted small">' + (D.exercises[w.id] || []).length + ' exercises' + (w.minutes ? ' · about ' + w.minutes + ' min' : '') + '</p></button>'
         : '<div class="card"><p class="label">Training</p><p class="muted">' + COACH.name + ' is building your program. It will show up here.</p></div>') +
-      '<div class="stats"><div class="stat"><b>' + doneN + '/' + D.workouts.length + '</b><span>Workouts this week</span></div><div class="stat"><b>' + habitWeek(D.habits || [], D.habitLogs || []) + '%</b><span>Habits, 7 days</span></div><div class="stat"><b>' + left + '</b><span>Calls left</span></div></div>' +
-      weeklyCard() +
-      '<button class="card tap" data-go="formcheck"><div class="row"><div><p class="label">Form check</p><h3>Send ' + COACH.name + ' a video</h3></div><span class="chip">' + ((D.formChecks || []).filter(function (x) { return x.coach_reply && ymd(new Date(x.replied_at || x.created_at)) >= WEEK_AGO; }).length ? 'New feedback' : 'Video') + '</span></div></button>' +
+      '<div class="stats"><div class="stat"><b>' + left + '</b><span>Sessions left</span></div><div class="stat"><b>' + st.rolled + '</b><span>Rolled over</span></div><div class="stat"><b>' + doneN + '/' + D.workouts.length + '</b><span>Workouts this week</span></div></div>' +
       habitsCard() +
       '<button class="card tap" data-go="checkin"><div class="row"><div><p class="label">Daily check-in</p><h3>' + (D.todayCheckin ? 'Checked in today' : 'How are you feeling?') + '</h3></div><span class="chip ' + (D.todayCheckin ? 'ok' : 'warn') + '">' + (D.todayCheckin ? 'Done' : '30 sec') + '</span></div></button>' +
       (last ? '<button class="card tap" data-tab="chat"><p class="label">Latest message</p><p>' + esc(last.body) + '</p><p class="muted small">' + (last.sender === 'coach' ? COACH.name : 'You') + ' · ' + esc(fmtDay(last.created_at)) + '</p></button>' : '');
   }
   function clientTrain() {
     var D = S.data, p = D.program;
-    if (!p) return '<div><p class="label">Your program</p><h2>Coming soon</h2></div><div class="empty">' + COACH.name + ' is building your program. You\'ll see your workouts here once it\'s ready.</div><button class="btn ghost block" data-go="library">Browse the exercise library</button>';
+    if (!p) return '<div><p class="label">Your program</p><h2>Coming soon</h2></div><div class="empty">' + COACH.name + ' is building your program. You\'ll see your workouts here once it\'s ready.</div>';
     return '<div><p class="label">Your program</p><h2>' + esc(p.name) + '</h2><p class="muted small">Week ' + (p.current_week || 1) + ' of ' + (p.weeks || 4) + '</p></div>' +
       '<div class="bar"><i style="width:' + Math.min(100, (p.current_week || 1) / (p.weeks || 4) * 100) + '%"></i></div>' +
       (D.workouts.length ? D.workouts.map(function (w) {
-        return '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><span class="label">' + esc(w.day_label || '') + '</span>' + (isDone(w.id) ? '<span class="chip ok">Done</span>' : '') + '</div><h3>' + esc(w.title) + '</h3><p class="muted small">' + esc(w.focus || '') + (w.focus ? ' · ' : '') + (D.exercises[w.id] || []).length + ' exercises</p></button>';
-      }).join('') : '<div class="empty">No workouts in this program yet.</div>') +
-      '<button class="btn ghost block" data-go="library">Browse the exercise library</button>';
+        return '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><span class="label">' + esc(w.day_label || '') + '</span>' + (isDone(w.id) ? '<span class="chip ok">Done</span>' : '<span class="chip' + (w.in_person ? ' solid' : '') + '">' + (w.in_person ? 'In person' : 'On your own') + '</span>') + '</div><h3>' + esc(w.title) + '</h3><p class="muted small">' + esc(w.focus || '') + (w.focus ? ' · ' : '') + (D.exercises[w.id] || []).length + ' exercises</p></button>';
+      }).join('') : '<div class="empty">No workouts in this program yet.</div>');
   }
   function workoutDetail(id) {
     var D = S.data, w = D.workouts.find(function (x) { return x.id === id; }); if (!w) return '';
@@ -212,7 +201,7 @@
         }
         var L = (D.lib || {})[e.library_id] || {}, vid = e.video_url || L.video_url, cue = e.detail || L.cues;
         var thumb = vid ? '<a class="thumb" href="' + esc(vid) + '" target="_blank" rel="noopener" style="text-decoration:none">Watch<br>demo</a>' : '<div class="thumb">Demo<br>soon</div>';
-        return '<div class="ex"><div class="exhead">' + thumb + '<div class="exbody"><b>' + esc(e.name) + '</b><span class="muted small">' + (e.sets || 1) + ' × ' + esc(e.reps || '') + (e.load ? ' · ' + esc(e.load) : '') + '</span>' + (cue ? '<span class="small">' + esc(cue) + '</span>' : '') + '<button class="linkbtn" data-go="formcheck" data-ex="' + esc(e.name) + '">Send a form check</button></div></div><div class="sets"><div class="set"><span></span><span>Load</span><span>Reps</span><span></span></div>' + sets + '</div></div>';
+        return '<div class="ex"><div class="exhead">' + thumb + '<div class="exbody"><b>' + esc(e.name) + '</b><span class="muted small">' + (e.sets || 1) + ' × ' + esc(e.reps || '') + (e.load ? ' · ' + esc(e.load) : '') + '</span>' + (cue ? '<span class="small">' + esc(cue) + '</span>' : '') + '</div></div><div class="sets"><div class="set"><span></span><span>Load</span><span>Reps</span><span></span></div>' + sets + '</div></div>';
       }).join('') +
       '<div class="fld"><label for="wnote">Notes for ' + COACH.name + '</label><textarea id="wnote" rows="2" placeholder="How did it feel? Anything hurt?"></textarea></div>' +
       (isDone(id) ? '<p class="ok">Completed this week ✓</p>' : '<button class="btn block" data-act="complete" data-id="' + id + '">Finish workout</button>');
@@ -270,13 +259,12 @@
     var D = S.data, c = D.client, st = sessionStats(D.sessions), ps = payStatus(D.payments, c);
     var wts = D.checkins.filter(function (x) { return x.weight != null; }).map(function (x) { return +x.weight; });
     return '<div class="row"><div><p class="label">Your plan</p><h2>' + esc(c.plan || 'Coaching') + '</h2></div>' + (ps ? '<span class="chip ' + (ps === 'Paid' ? 'ok' : 'warn') + '">' + (ps === 'Paid' ? 'Paid this month' : 'Payment due') + '</span>' : '') + '</div>' +
-      '<div class="stats"><div class="stat"><b>' + (c.sessions_per_month != null ? Math.max(0, c.sessions_per_month - st.used) : '—') + '</b><span>Calls left</span></div><div class="stat"><b>' + (c.sessions_per_month != null ? c.sessions_per_month : '—') + '</b><span>Per month</span></div><div class="stat"><b>' + (c.monthly_price != null ? money(c.monthly_price) : '—') + '</b><span>Per month</span></div></div>' +
-      '<a class="btn block" href="' + COACH.bookingLink + '" target="_blank" rel="noopener">Book a coaching call</a>' +
-      '<div class="card"><p class="label">Progress</p><div class="row"><h3>Bodyweight</h3>' + (wts.length > 1 ? '<span class="chip">' + (wts[wts.length - 1] - wts[0] > 0 ? '+' : '') + (wts[wts.length - 1] - wts[0]).toFixed(1) + ' lb</span>' : '') + '</div>' + spark(wts) + '<button class="btn ghost mini" data-go="photos">Progress photos' + ((D.photos || []).length ? ' (' + D.photos.length + ')' : '') + '</button></div>' +
-      '<div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn ghost" data-go="weekly">Weekly check-ins</button><button class="btn ghost" data-go="formcheck">Form checks</button></div>' +
+      '<div class="stats"><div class="stat"><b>' + (c.sessions_per_month != null ? Math.max(0, c.sessions_per_month - st.used) : '—') + '</b><span>Sessions left</span></div><div class="stat"><b>' + (c.sessions_per_month != null ? c.sessions_per_month : '—') + '</b><span>Per month</span></div><div class="stat"><b>' + (c.monthly_price != null ? money(c.monthly_price) : '—') + '</b><span>Per month</span></div></div>' +
+      '<a class="btn block" href="' + COACH.bookingLink + '" target="_blank" rel="noopener">Book a session</a>' +
+      '<div class="card"><p class="label">Progress</p><div class="row"><h3>Bodyweight</h3>' + (wts.length > 1 ? '<span class="chip">' + (wts[wts.length - 1] - wts[0] > 0 ? '+' : '') + (wts[wts.length - 1] - wts[0]).toFixed(1) + ' lb</span>' : '') + '</div>' + spark(wts) + '</div>' +
       (c.goal ? '<div class="card"><p class="label">Your goal</p><p>' + esc(c.goal) + '</p></div>' : '') +
       '<div class="card"><p class="label">Documents</p>' + (D.documents.length ? '<div class="list">' + D.documents.map(function (d) { return '<div class="li">' + (d.url ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener">' + esc(d.name) + '</a>' : '<span>' + esc(d.name) + '</span>') + '<span class="muted small">' + (d.signed_on ? esc(fmtShort(d.signed_on)) : '') + '</span></div>'; }).join('') + '</div>' : '<p class="muted small">Your signed forms will show here.</p>') + '</div>' +
-      '<div class="card"><p class="label">Plan details</p><div class="list"><div class="li"><span>Term</span><b>' + esc(c.term || '—') + '</b></div><div class="li"><span>Call schedule</span><b>' + esc(c.schedule || '—') + '</b></div><div class="li"><span>Payment</span><b>' + esc(c.payment_method || '—') + '</b></div></div><p class="muted small">Reschedule calls at least 24 hours ahead. Questions? Call or text ' + COACH.phone + '.</p></div>' +
+      '<div class="card"><p class="label">Plan details</p><div class="list"><div class="li"><span>Term</span><b>' + esc(c.term || '—') + '</b></div><div class="li"><span>Schedule</span><b>' + esc(c.schedule || '—') + '</b></div><div class="li"><span>Payment</span><b>' + esc(c.payment_method || '—') + '</b></div></div><p class="muted small">Cancel or reschedule at least 24 hours ahead and the session rolls over. Questions? Call or text ' + COACH.phone + '.</p></div>' +
       '<button class="btn ghost block" data-act="signout">Sign out</button>';
   }
 
@@ -294,11 +282,9 @@
       q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; }),
       q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; }),
       q(sb.from('habits').select('*').order('position')).catch(function () { return []; }),
-      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; }),
-      q(sb.from('weekly_checkins').select('id,client_id,week_of').is('coach_reply', null)).catch(function () { return []; }),
-      q(sb.from('form_checks').select('id,client_id,exercise,created_at').is('coach_reply', null)).catch(function () { return []; })
+      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; })
     ]);
-    D.guide = res[8]; D.habits = res[9]; D.foods = res[10]; D.pendWeekly = res[11]; D.pendForms = res[12];
+    D.guide = res[8]; D.habits = res[9]; D.foods = res[10];
     D.library = res[5]; D.templates = res[6]; D.tplEx = {};
     res[7].forEach(function (e) { (D.tplEx[e.template_id] = D.tplEx[e.template_id] || []).push(e); });
     D.clients = res[0]; D.sessions = res[1]; D.payments = res[2];
@@ -325,12 +311,9 @@
       q(sb.from('food_logs').select('*').eq('client_id', id).order('logged_at', { ascending: false }).limit(15)),
       q(sb.from('sessions').select('*').eq('client_id', id).order('starts_at', { ascending: false }).limit(40)),
       q(sb.from('payments').select('*').eq('client_id', id).order('month', { ascending: false }).limit(24)),
-      q(sb.from('habit_logs').select('*').eq('client_id', id).gte('day', WEEK_AGO)).catch(function () { return []; }),
-      q(sb.from('weekly_checkins').select('*').eq('client_id', id).order('week_of', { ascending: false }).limit(20)).catch(function () { return []; }),
-      q(sb.from('form_checks').select('*').eq('client_id', id).order('created_at', { ascending: false }).limit(30)).catch(function () { return []; }),
-      q(sb.from('progress_photos').select('*').eq('client_id', id).order('taken_on', { ascending: false }).limit(120)).catch(function () { return []; })
+      q(sb.from('habit_logs').select('*').eq('client_id', id).gte('day', WEEK_AGO)).catch(function () { return []; })
     ]);
-    var d = { client: cById(id), notes: res[0], messages: res[1], program: res[2][0] || null, nutrition: res[3], documents: res[4], checkins: res[5], completions: res[6], food: res[7], sessions: res[8], payments: res[9], habitLogs: res[10] || [], weekly: res[11] || [], formChecks: res[12] || [], photos: res[13] || [], workouts: [], exercises: {} };
+    var d = { client: cById(id), notes: res[0], messages: res[1], program: res[2][0] || null, nutrition: res[3], documents: res[4], checkins: res[5], completions: res[6], food: res[7], sessions: res[8], payments: res[9], habitLogs: res[10] || [], workouts: [], exercises: {} };
     if (d.program) {
       d.workouts = await q(sb.from('workouts').select('*').eq('program_id', d.program.id).order('position'));
       if (d.workouts.length) {
@@ -349,15 +332,14 @@
     var flags = active.map(function (c) { var m = clientMeta(c), why = [];
       if (c.parq_status === 'Needs clearance') why.push('PAR-Q clearance needed');
       if (m.pay === 'Due') why.push('Payment due'); else if (m.pay === null && c.monthly_price) why.push('No payment logged this month');
-      if (!isLibPlan(c)) { if (m.checkinDays == null) why.push('No check-ins yet'); else if (m.checkinDays >= 4) why.push('No check-in for ' + m.checkinDays + ' days'); }
+      if (m.checkinDays == null) why.push('No check-ins yet'); else if (m.checkinDays >= 4) why.push('No check-in for ' + m.checkinDays + ' days');
       return { c: c, why: why }; }).filter(function (x) { return x.why.length; });
     var unread = Object.keys(D.unread).reduce(function (a, k) { return a + D.unread[k]; }, 0);
     return '<div><p class="label">' + esc(fmtDay(NOW)) + '</p><h2>Coach dashboard</h2></div>' +
-      '<div class="stats"><div class="stat"><b>' + active.length + '</b><span>Active clients</span></div><div class="stat"><b>' + up.length + '</b><span>Calls next 7 days</span></div><div class="stat"><b>' + unread + '</b><span>Unread messages</span></div></div>' +
+      '<div class="stats"><div class="stat"><b>' + active.length + '</b><span>Active clients</span></div><div class="stat"><b>' + up.length + '</b><span>Sessions next 7 days</span></div><div class="stat"><b>' + unread + '</b><span>Unread messages</span></div></div>' +
       (D.clients.length ? '' : '<div class="empty"><h3>Add your first client</h3><p class="small">Add them with the email they\'ll sign in with. When they go to primalroots.fit/app and sign in, their account connects automatically.</p><button class="btn" data-go="addclient">+ Add client</button></div>') +
-      reviewCard() +
       (flags.length ? '<div class="card"><p class="label">Needs attention</p>' + flags.map(function (x) { return '<button class="li tap" data-client="' + x.c.id + '"><span><b>' + esc(x.c.full_name) + '</b><br><span class="small muted">' + esc(x.why.join(' · ')) + '</span></span><span class="chip warn">Open</span></button>'; }).join('') + '</div>' : '') +
-      '<div class="card"><div class="row"><p class="label">Upcoming calls</p><button class="btn ghost mini" data-tab="schedule">Calls</button></div>' + (up.length ? '<div class="list">' + up.map(function (s) { var c = cById(s.client_id) || { full_name: '?' }; return '<button class="li tap" data-client="' + s.client_id + '"><span><b>' + esc(c.full_name) + '</b><br><span class="small muted">' + esc(c.plan || '') + '</span></span><span class="small" style="text-align:right">' + esc(fmtDay(s.starts_at)) + '<br>' + esc(fmtTime(s.starts_at)) + '</span></button>'; }).join('') + '</div>' : '<p class="muted small">No calls in the next 7 days.</p>') + '</div>' +
+      '<div class="card"><div class="row"><p class="label">Upcoming sessions</p><button class="btn ghost mini" data-tab="schedule">Schedule</button></div>' + (up.length ? '<div class="list">' + up.map(function (s) { var c = cById(s.client_id) || { full_name: '?' }; return '<button class="li tap" data-client="' + s.client_id + '"><span><b>' + esc(c.full_name) + '</b><br><span class="small muted">' + esc(c.plan || '') + '</span></span><span class="small" style="text-align:right">' + esc(fmtDay(s.starts_at)) + '<br>' + esc(fmtTime(s.starts_at)) + '</span></button>'; }).join('') + '</div>' : '<p class="muted small">No sessions in the next 7 days.</p>') + '</div>' +
       '<button class="btn ghost block" data-act="signout">Sign out</button>';
   }
   function coachClients() {
@@ -368,7 +350,7 @@
         return '<button class="li tap" data-client="' + c.id + '"><span style="display:flex;gap:12px;align-items:center"><span class="avatar">' + esc((c.first_name || c.full_name || '?')[0]) + '</span><span><b>' + esc(c.full_name) + '</b><br><span class="small muted">' + esc(c.plan || 'No plan set') + (c.sessions_per_month != null ? ' · ' + Math.max(0, c.sessions_per_month - m.st.used) + ' sessions left' : '') + (c.profile_id ? '' : ' · not signed in yet') + '</span></span></span><span class="chip ' + chip[0] + '">' + esc(chip[1]) + '</span></button>';
       }).join('') + '</div>' : '<div class="empty">No clients yet.</div>');
   }
-  var PLANS = ['1-on-1 Online Coaching', 'Exercise Library', 'Custom'];
+  var PLANS = ['The Full Root', 'The Root', 'Custom', 'Coaching only', 'Plans only'];
   var TERMS = ['Month to month', '3-month prepaid', '6-month prepaid'];
   var METHODS = ['Card', 'Cash', 'Zelle', 'ACH bank transfer'];
   function opt(list, cur) { return '<option value=""></option>' + list.map(function (o) { return '<option' + (o === cur ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); }
@@ -378,12 +360,12 @@
       '<div class="fld"><label for="cf_name">Full name *</label><input id="cf_name" value="' + esc(c.full_name || '') + '"></div>' +
       '<div class="fld"><label for="cf_email">Email they\'ll sign in with *</label><input id="cf_email" type="email" value="' + esc(c.email || '') + '"></div>' +
       '<div class="two"><div class="fld"><label for="cf_phone">Phone</label><input id="cf_phone" value="' + esc(c.phone || '') + '"></div><div class="fld"><label for="cf_status">Status</label><select id="cf_status">' + ['Active', 'Lead', 'Paused', 'Former'].map(function (o) { return '<option' + (o === (c.status || 'Active') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div></div>' +
-      '<div class="two"><div class="fld"><label for="cf_plan">Plan</label><select id="cf_plan">' + opt(PLANS, c.plan) + '</select></div><div class="fld"><label for="cf_spm">Calls / month</label><input id="cf_spm" inputmode="numeric" value="' + esc(c.sessions_per_month != null ? c.sessions_per_month : '') + '"></div></div>' +
-      '<div class="two"><label class="opt"><input type="checkbox" id="cf_wp"' + (c.workout_plan !== false ? ' checked' : '') + '><span>Custom program</span></label><label class="opt"><input type="checkbox" id="cf_np"' + (c.nutrition_plan !== false ? ' checked' : '') + '><span>Food guidance</span></label></div>' +
+      '<div class="two"><div class="fld"><label for="cf_plan">Plan</label><select id="cf_plan">' + opt(PLANS, c.plan) + '</select></div><div class="fld"><label for="cf_spm">Sessions / month</label><input id="cf_spm" inputmode="numeric" value="' + esc(c.sessions_per_month != null ? c.sessions_per_month : '') + '"></div></div>' +
+      '<div class="two"><label class="opt"><input type="checkbox" id="cf_wp"' + (c.workout_plan ? ' checked' : '') + '><span>Workout plan</span></label><label class="opt"><input type="checkbox" id="cf_np"' + (c.nutrition_plan ? ' checked' : '') + '><span>Nutrition plan</span></label></div>' +
       '<div class="two"><div class="fld"><label for="cf_price">Monthly price ($)</label><input id="cf_price" inputmode="decimal" value="' + esc(c.monthly_price != null ? c.monthly_price : '') + '"></div><div class="fld"><label for="cf_method">Payment method</label><select id="cf_method">' + opt(METHODS, c.payment_method) + '</select></div></div>' +
       '<div class="two"><div class="fld"><label for="cf_term">Term</label><select id="cf_term">' + opt(TERMS, c.term) + '</select></div><div class="fld"><label for="cf_bill">Billing day</label><input id="cf_bill" inputmode="numeric" value="' + esc(c.billing_day || '') + '"></div></div>' +
       '<div class="two"><div class="fld"><label for="cf_start">Start date</label><input id="cf_start" type="date" value="' + esc(c.start_date || '') + '"></div><div class="fld"><label for="cf_end">Term end</label><input id="cf_end" type="date" value="' + esc(c.term_end || '') + '"></div></div>' +
-      '<div class="fld"><label for="cf_sched">Call schedule</label><input id="cf_sched" placeholder="e.g. Every other Tuesday 6pm" value="' + esc(c.schedule || '') + '"></div>' +
+      '<div class="fld"><label for="cf_sched">Recurring schedule</label><input id="cf_sched" placeholder="e.g. Mon/Wed 6:00am" value="' + esc(c.schedule || '') + '"></div>' +
       '<div class="fld"><label for="cf_parq">PAR-Q status</label><select id="cf_parq">' + ['Cleared', 'Needs clearance', 'Clearance received'].map(function (o) { return '<option' + (o === (c.parq_status || 'Cleared') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>' +
       '<div class="fld"><label for="cf_goal">Main goal</label><textarea id="cf_goal" rows="2">' + esc(c.goal || '') + '</textarea></div>' +
       '<div class="fld"><label for="cf_avoid">Injuries / movements to avoid</label><textarea id="cf_avoid" rows="2">' + esc(c.avoid || '') + '</textarea></div>' +
@@ -401,9 +383,7 @@
   function coachClient() {
     var d = S.data.detail; if (!d) return '<div class="loading">Loading…</div>';
     var c = d.client, m = clientMeta(c), tab = S.ctab || 'overview';
-    var pw = d.weekly.filter(function (x) { return !x.coach_reply; }).length, pf = d.formChecks.filter(function (x) { return !x.coach_reply; }).length;
-    var tabs = isLibPlan(c) ? [['overview', 'Overview'], ['money', 'Payments'], ['notes', 'Notes'], ['docs', 'Paperwork'], ['edit', 'Edit']] :
-      [['overview', 'Overview'], ['checkins', 'Check-ins' + (pw ? ' (' + pw + ')' : '')], ['forms', 'Form checks' + (pf ? ' (' + pf + ')' : '')], ['training', 'Training'], ['photos', 'Photos'], ['chat', 'Messages'], ['nutrition', 'Food notes'], ['sessions', 'Calls'], ['money', 'Payments'], ['notes', 'Notes'], ['docs', 'Paperwork'], ['edit', 'Edit']];
+    var tabs = [['overview', 'Overview'], ['training', 'Training'], ['nutrition', 'Nutrition'], ['sessions', 'Sessions'], ['money', 'Payments'], ['notes', 'Notes'], ['chat', 'Messages'], ['docs', 'Paperwork'], ['edit', 'Edit']];
     var head = '<div class="row"><div><p class="label">' + esc(c.plan || 'No plan') + ' · ' + esc(c.status) + '</p><h2>' + esc(c.full_name) + '</h2><p class="muted small">' + esc(c.email) + (c.phone ? ' · ' + esc(c.phone) : '') + '</p></div><span class="avatar">' + esc((c.first_name || c.full_name)[0]) + '</span></div>' +
       (c.parq_status === 'Needs clearance' ? '<div class="flag"><b>PAR-Q:</b> needs physician clearance (Form 5) before training.</div>' : '') +
       (c.profile_id ? '' : '<div class="flag" style="border-color:var(--gold);background:#fbf6e6">Not signed in yet. Tell them to go to <b>primalroots.fit/app</b> and sign in with <b>' + esc(c.email) + '</b>.</div>') +
@@ -411,23 +391,20 @@
     var body = '';
     if (tab === 'overview') {
       var ck = d.checkins[0];
-      body = '<div class="stats"><div class="stat"><b>' + m.st.used + (c.sessions_per_month != null ? '/' + c.sessions_per_month : '') + '</b><span>Calls used</span></div><div class="stat"><b>' + habitWeek((S.data.habits || []).filter(function (h) { return h.active !== false; }), d.habitLogs || []) + '%</b><span>Habits, 7 days</span></div><div class="stat"><b style="color:' + (m.pay === 'Paid' ? 'var(--ok)' : 'var(--rust)') + '">' + (m.pay || '—') + '</b><span>This month</span></div></div>' +
+      body = '<div class="stats"><div class="stat"><b>' + m.st.used + (c.sessions_per_month != null ? '/' + c.sessions_per_month : '') + '</b><span>Sessions used</span></div><div class="stat"><b>' + m.st.rolled + '</b><span>Rolled over</span></div><div class="stat"><b style="color:' + (m.pay === 'Paid' ? 'var(--ok)' : 'var(--rust)') + '">' + (m.pay || '—') + '</b><span>This month</span></div></div>' +
         (c.avoid ? '<div class="card"><p class="label">Watch for</p><p>' + esc(c.avoid) + '</p></div>' : '') +
         (c.goal ? '<div class="card"><p class="label">Goal</p><p>' + esc(c.goal) + '</p></div>' : '') +
-        '<div class="card"><p class="label">Plan</p><div class="list"><div class="li"><span>Next call</span><b>' + (m.st.next ? esc(fmtDay(m.st.next.starts_at) + ' · ' + fmtTime(m.st.next.starts_at)) : 'Not booked') + '</b></div><div class="li"><span>Call schedule</span><b>' + esc(c.schedule || '—') + '</b></div><div class="li"><span>Price</span><b>' + (c.monthly_price != null ? money(c.monthly_price) + '/mo' : '—') + (c.payment_method ? ' · ' + esc(c.payment_method) : '') + '</b></div><div class="li"><span>Term</span><b>' + esc(c.term || '—') + (c.term_end ? ' (ends ' + esc(fmtShort(c.term_end)) + ')' : '') + '</b></div><div class="li"><span>Emergency contact</span><b>' + esc(c.emergency_contact || '—') + '</b></div></div></div>' +
+        '<div class="card"><p class="label">Plan</p><div class="list"><div class="li"><span>Next session</span><b>' + (m.st.next ? esc(fmtDay(m.st.next.starts_at) + ' · ' + fmtTime(m.st.next.starts_at)) : 'Not booked') + '</b></div><div class="li"><span>Schedule</span><b>' + esc(c.schedule || '—') + '</b></div><div class="li"><span>Price</span><b>' + (c.monthly_price != null ? money(c.monthly_price) + '/mo' : '—') + (c.payment_method ? ' · ' + esc(c.payment_method) : '') + '</b></div><div class="li"><span>Term</span><b>' + esc(c.term || '—') + (c.term_end ? ' (ends ' + esc(fmtShort(c.term_end)) + ')' : '') + '</b></div><div class="li"><span>Emergency contact</span><b>' + esc(c.emergency_contact || '—') + '</b></div></div></div>' +
         '<div class="card"><p class="label">Latest check-in</p>' + (ck ? '<p><b>' + esc(fmtShort(ck.day)) + '</b> · ' + (ck.weight != null ? ck.weight + ' lb · ' : '') + 'Sleep ' + (ck.sleep || '—') + ' · Energy ' + (ck.energy || '—') + ' · Soreness ' + (ck.soreness || '—') + ' · Stress ' + (ck.stress || '—') + '</p>' + (ck.note ? '<p class="small">"' + esc(ck.note) + '"</p>' : '') : '<p class="muted small">No check-ins yet.</p>') + '</div>' +
         habitsOverview(d) +
         '<div class="card"><p class="label">Recent workouts</p>' + (d.completions.length ? d.completions.map(function (x) { var w = d.workouts.find(function (y) { return y.id === x.workout_id; }); return '<div class="li"><span>' + esc(w ? w.title : 'Workout') + (x.note ? '<br><span class="small muted">"' + esc(x.note) + '"</span>' : '') + '</span><span class="muted small">' + esc(fmtShort(ymd(new Date(x.completed_at)))) + '</span></div>'; }).join('') : '<p class="muted small">None yet.</p>') + '</div>' +
         '<div class="card"><p class="label">Recent food log</p>' + (d.food.length ? d.food.map(function (f) { return '<div class="li"><span><span class="tag">' + esc(f.meal || '') + '</span> ' + esc(f.description) + '</span><span class="muted small">' + esc(fmtShort(ymd(new Date(f.logged_at)))) + '</span></div>'; }).join('') : '<p class="muted small">Nothing logged yet.</p>') + '</div>';
     } else if (tab === 'training') body = programEditor(d);
-    else if (tab === 'checkins') body = coachCheckins(d);
-    else if (tab === 'forms') body = coachForms(d);
-    else if (tab === 'photos') body = photosScreen(d.photos, true);
     else if (tab === 'nutrition') body = nutritionEditor(d);
     else if (tab === 'sessions') {
-      body = '<div class="ed"><p class="label">Log a call</p><div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="ss_at" type="datetime-local" aria-label="Date and time"><select id="ss_status" aria-label="Status">' + ['Scheduled', 'Attended', 'Late cancel', 'No-show', 'Cancelled 24h+', 'Coach cancelled'].map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select></div><button class="btn mini" data-act="addsession">Add call</button></div>' +
-        '<div class="list">' + (d.sessions.length ? d.sessions.map(function (s) { return '<div class="li"><span><b>' + esc(fmtDay(s.starts_at)) + '</b> ' + esc(fmtTime(s.starts_at)) + '</span><select class="inline" data-sstatus="' + s.id + '" aria-label="Session status">' + ['Scheduled', 'Attended', 'Late cancel', 'No-show', 'Cancelled 24h+', 'Coach cancelled'].map(function (o) { return '<option' + (o === s.status ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>'; }).join('') : '<p class="muted small" style="padding:12px 0">No calls logged.</p>') + '</div>' +
-        '<p class="muted small">Late cancels and no-shows count as used. "Cancelled 24h+" doesn\'t.</p>';
+      body = '<div class="ed"><p class="label">Add a session</p><div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="ss_at" type="datetime-local" aria-label="Date and time"><select id="ss_status" aria-label="Status">' + ['Scheduled', 'Attended', 'Late cancel', 'No-show', 'Cancelled 24h+', 'Coach cancelled'].map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select></div><button class="btn mini" data-act="addsession">Add session</button></div>' +
+        '<div class="list">' + (d.sessions.length ? d.sessions.map(function (s) { return '<div class="li"><span><b>' + esc(fmtDay(s.starts_at)) + '</b> ' + esc(fmtTime(s.starts_at)) + '</span><select class="inline" data-sstatus="' + s.id + '" aria-label="Session status">' + ['Scheduled', 'Attended', 'Late cancel', 'No-show', 'Cancelled 24h+', 'Coach cancelled'].map(function (o) { return '<option' + (o === s.status ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>'; }).join('') : '<p class="muted small" style="padding:12px 0">No sessions logged.</p>') + '</div>' +
+        '<p class="muted small">Late cancels and no-shows count as used. "Cancelled 24h+" rolls over.</p>';
     } else if (tab === 'money') {
       body = '<div class="ed"><p class="label">Log a payment</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="small">Month<input id="pm_month" type="month" value="' + MONTH.slice(0, 7) + '"></label><label class="small">Method<select id="pm_method">' + opt(METHODS, c.payment_method) + '</select></label><label class="small">Amount due ($)<input id="pm_due" inputmode="decimal" value="' + esc(c.monthly_price != null ? c.monthly_price : '') + '"></label><label class="small">Amount paid ($)<input id="pm_paid" inputmode="decimal"></label><label class="small">Date paid<input id="pm_date" type="date" value="' + TODAY + '"></label><label class="small">Note<input id="pm_note"></label></div><button class="btn mini" data-act="addpayment">Save payment</button></div>' +
         '<div class="list">' + (d.payments.length ? d.payments.map(function (p) { var ok = +p.amount_paid >= +p.amount_due; return '<div class="li"><span><b>' + esc(parseYmd(p.month).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })) + '</b><br><span class="small muted">' + money(p.amount_paid) + ' of ' + money(p.amount_due) + (p.method ? ' · ' + esc(p.method) : '') + (p.paid_on ? ' · ' + esc(fmtShort(p.paid_on)) : '') + (p.notes ? ' · ' + esc(p.notes) : '') + '</span></span><span class="chip ' + (ok ? 'ok' : 'warn') + '">' + (ok ? 'Paid' : +p.amount_paid > 0 ? 'Partial' : 'Unpaid') + '</span></div>'; }).join('') : '<p class="muted small" style="padding:12px 0">No payments logged.</p>') + '</div>';
@@ -451,6 +428,7 @@
         var ex = d.exercises[w.id] || [];
         return '<div class="ed" data-wid="' + w.id + '"><div style="display:grid;grid-template-columns:80px 1fr;gap:8px"><input aria-label="Day" data-w="day_label" value="' + esc(w.day_label || '') + '" placeholder="Mon"><input aria-label="Workout title" data-w="title" value="' + esc(w.title) + '" placeholder="Workout title"></div>' +
           '<div style="display:grid;grid-template-columns:1fr 70px;gap:8px"><input aria-label="Focus" data-w="focus" value="' + esc(w.focus || '') + '" placeholder="Focus, e.g. Lower body"><input aria-label="Minutes" data-w="minutes" inputmode="numeric" value="' + esc(w.minutes || '') + '" placeholder="Min"></div>' +
+          '<label class="opt"><input type="checkbox" data-w="in_person"' + (w.in_person ? ' checked' : '') + '><span>In-person session</span></label>' +
           '<div class="exrow tag"><span>Exercise</span><span>Sets</span><span>Reps</span><span class="ld">Load</span><span></span></div>' +
           ex.map(function (e) { return exRow(e); }).join('') +
           '<div data-newex></div><div class="row" style="flex-wrap:wrap"><button class="btn mini" data-act="pick">+ From library</button><button class="btn ghost mini" data-act="addexrow">+ Blank</button><button class="btn mini gold" data-act="saveworkout" data-id="' + w.id + '">Save workout</button></div><div class="row"><button class="x" style="width:auto;padding:0 10px" data-act="savetpl" data-id="' + w.id + '">Save as template</button><button class="x" style="width:auto;padding:0 10px" data-act="delworkout" data-id="' + w.id + '">Delete workout</button></div></div>';
@@ -483,12 +461,12 @@
   function coachSchedule() {
     var D = S.data, days = [];
     for (var i = 0; i < 7; i++) { var d = new Date(NOW); d.setDate(d.getDate() + i); days.push(d); }
-    return '<div><p class="label">Next 7 days</p><h2>Coaching calls</h2></div>' +
-      '<div class="ed"><p class="label">Log a call</p><select id="sc_client" aria-label="Client">' + D.clients.filter(function (c) { return c.status === 'Active'; }).map(function (c) { return '<option value="' + c.id + '">' + esc(c.full_name) + '</option>'; }).join('') + '</select><input id="sc_at" type="datetime-local" aria-label="Date and time"><button class="btn mini" data-act="schedadd">Add</button></div>' +
+    return '<div><p class="label">Next 7 days</p><h2>Schedule</h2></div>' +
+      '<div class="ed"><p class="label">Add a session</p><select id="sc_client" aria-label="Client">' + D.clients.filter(function (c) { return c.status === 'Active'; }).map(function (c) { return '<option value="' + c.id + '">' + esc(c.full_name) + '</option>'; }).join('') + '</select><input id="sc_at" type="datetime-local" aria-label="Date and time"><button class="btn mini" data-act="schedadd">Add</button></div>' +
       days.map(function (d) {
         var ss = D.sessions.filter(function (s) { return new Date(s.starts_at).toDateString() === d.toDateString(); });
         return '<div class="card"><p class="label">' + esc(fmtDay(d)) + '</p>' + (ss.length ? ss.map(function (s) { var c = cById(s.client_id) || { full_name: '?' }; return '<button class="li tap" data-client="' + s.client_id + '"><b>' + esc(fmtTime(s.starts_at)) + '</b><span>' + esc(c.full_name) + ' <span class="chip">' + esc(s.status) + '</span></span></button>'; }).join('') : '<p class="muted small">Open</p>') + '</div>';
-      }).join('') + '<p class="muted small">Calls booked through Google Calendar live there. Log them here to track calls used.</p>';
+      }).join('') + '<p class="muted small">Sessions booked through Google Calendar still live there for now. Log them here to track sessions used.</p>';
   }
   function coachInbox() {
     var D = S.data;
@@ -588,157 +566,6 @@
         return '<div class="li"><span>' + esc(h.name) + '</span><span class="hdots" aria-label="' + n + ' of 7 days">' + days.map(function (dy) { return '<i class="' + (habitDone(L, h.id, dy) ? 'on' : '') + '"></i>'; }).join('') + '</span></div>'; }).join('') + '</div></div>';
   }
 
-
-  /* ---------- online coaching: library members, weekly check-ins, form checks, photos ---------- */
-  function isLibPlan(c) { return /library/i.test((c && c.plan) || ''); }
-  function weekOf(d) { d = new Date(d || NOW); var day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return ymd(d); }
-  var MEDIA = 'client-media', MAX_MB = 50;
-  async function uploadMedia(file, kind) {
-    var cid = S.role === 'coach' ? S.data.detail.client.id : S.data.client.id;
-    if (file.size > MAX_MB * 1048576) throw new Error('That file is ' + Math.round(file.size / 1048576) + ' MB. The limit is ' + MAX_MB + ' MB, so trim the clip to under 30 seconds and try again.');
-    var ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
-    var path = cid + '/' + kind + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-    var r = await sb.storage.from(MEDIA).upload(path, file, { contentType: file.type || undefined, upsert: false });
-    if (r.error) throw r.error;
-    return path;
-  }
-  /* Fill in signed links for private photos and videos after each render. */
-  S.urls = {};
-  async function hydrateMedia() {
-    var els = root.querySelectorAll('[data-path]'), need = [];
-    els.forEach(function (el) { var p = el.dataset.path, u = S.urls[p]; if (u && u.exp > Date.now()) { if (el.getAttribute('src') !== u.url) el.setAttribute('src', u.url); } else if (need.indexOf(p) < 0) need.push(p); });
-    if (!need.length) return;
-    try {
-      var r = await sb.storage.from(MEDIA).createSignedUrls(need, 3600);
-      if (r.error) throw r.error;
-      (r.data || []).forEach(function (x) { if (x.signedUrl) S.urls[x.path] = { url: x.signedUrl, exp: Date.now() + 3300e3 }; });
-      root.querySelectorAll('[data-path]').forEach(function (el) { var u = S.urls[el.dataset.path]; if (u) el.setAttribute('src', u.url); });
-    } catch (e) { console.warn(e); }
-  }
-  function thumb(p) { return '<img class="ph" data-path="' + esc(p) + '" alt="Progress photo" loading="lazy">'; }
-
-  /* client: inactive plan */
-  function inactiveScreen() {
-    return '<div class="empty" style="margin-top:20px"><h3>Your plan isn\'t active</h3><p>Your access is paused right now. To start again, book a free call or reach out to ' + COACH.name + '.</p><p class="small">Call or text ' + COACH.phone + ' · ' + COACH.email + '</p><a class="btn" href="' + COACH.callLink + '" target="_blank" rel="noopener">Book a free call</a><button class="btn ghost" data-act="signout">Sign out</button></div>';
-  }
-
-  /* client: exercise library (members and coaching clients) */
-  function memberLibrary() {
-    var lib = S.data.library || [], f = S.mlCat || '', qy = (S.mlQ || '').toLowerCase();
-    var list = lib.filter(function (e) { return libMatches(e, f, qy); });
-    return '<div><p class="label">' + lib.length + ' exercises</p><h2>Exercise library</h2></div>' +
-      '<input id="mlq" class="libsearch" type="search" placeholder="Search exercises" value="' + esc(S.mlQ || '') + '" aria-label="Search exercises">' +
-      '<div class="cats"><button class="chip' + (!f ? ' on' : '') + '" data-act="mlcat" data-v="">All</button>' + CATS.map(function (c) { return lib.some(function (e) { return e.category === c; }) ? '<button class="chip' + (f === c ? ' on' : '') + '" data-act="mlcat" data-v="' + esc(c) + '">' + esc(c) + '</button>' : ''; }).join('') + '</div>' +
-      '<div class="list">' + (list.length ? list.map(function (e) { return '<button class="li tap" data-act="viewex" data-id="' + e.id + '"><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + (e.equipment ? ' · ' + esc(e.equipment) : '') + '</span></span>' + (e.video_url ? '<span class="chip ok">Video</span>' : '') + '</button>'; }).join('') : '<p class="muted small" style="padding:12px 0">' + (lib.length ? 'No exercises match.' : 'The library is being filled in. Check back soon.') + '</p>') + '</div>';
-  }
-  function exerciseView() {
-    var e = (S.data.library || []).find(function (x) { return x.id === S.subId; }); if (!e) return '<div class="empty">Exercise not found.</div>';
-    return '<div><p class="label">' + esc(e.category) + (e.equipment ? ' · ' + esc(e.equipment) : '') + '</p><h2>' + esc(e.name) + '</h2></div>' +
-      (e.video_url ? '<a class="btn block" href="' + esc(e.video_url) + '" target="_blank" rel="noopener">Watch the demo</a>' : '<div class="card"><p class="muted small">Demo video coming soon.</p></div>') +
-      '<div class="stats"><div class="stat"><b>' + esc(e.default_sets || '—') + '</b><span>Sets</span></div><div class="stat"><b>' + esc(e.default_reps || '—') + '</b><span>Reps</span></div><div class="stat"><b>' + esc(e.default_load || '—') + '</b><span>Load</span></div></div>' +
-      (e.cues ? '<div class="card"><p class="label">Coaching cues</p><p>' + esc(e.cues) + '</p></div>' : '');
-  }
-  function memberWorkouts() {
-    var T = S.data.sharedTpl || [];
-    return '<div><p class="label">Ready-made</p><h2>Workouts</h2><p class="muted small">Follow these as written, or swap in exercises from the library. Start light and stop if anything hurts.</p></div>' +
-      (T.length ? T.map(function (t) { var n = (S.data.sharedEx[t.id] || []).length; return '<button class="card tap" data-act="viewtpl" data-id="' + t.id + '"><p class="label">' + esc(t.focus || 'Workout') + '</p><h3>' + esc(t.name) + '</h3><p class="muted small">' + n + ' exercises' + (t.minutes ? ' · about ' + t.minutes + ' min' : '') + '</p>' + (t.description ? '<p class="small">' + esc(t.description) + '</p>' : '') + '</button>'; }).join('') : '<div class="empty">New workouts are on the way.</div>');
-  }
-  function sharedWorkoutView() {
-    var t = (S.data.sharedTpl || []).find(function (x) { return x.id === S.subId; }); if (!t) return '';
-    var lib = S.data.library || [];
-    return '<div><p class="label">' + esc(t.focus || 'Workout') + '</p><h2>' + esc(t.name) + '</h2>' + (t.description ? '<p class="muted small">' + esc(t.description) + '</p>' : '') + '</div>' +
-      (S.data.sharedEx[t.id] || []).map(function (e, i) {
-        var L = lib.find(function (x) { return x.id === e.library_id; }) || {}, vid = e.video_url || L.video_url, cue = e.detail || L.cues;
-        return '<div class="ex"><div class="exhead">' + (vid ? '<a class="thumb" href="' + esc(vid) + '" target="_blank" rel="noopener" style="text-decoration:none">Watch<br>demo</a>' : '<div class="thumb">' + (i + 1) + '</div>') + '<div class="exbody"><b>' + esc(e.name) + '</b><span class="muted small">' + (e.sets || 1) + ' × ' + esc(e.reps || '') + (e.load ? ' · ' + esc(e.load) : '') + '</span>' + (cue ? '<span class="small">' + esc(cue) + '</span>' : '') + '</div></div></div>';
-      }).join('');
-  }
-  function memberMe() {
-    var c = S.data.client, ps = payStatus(S.data.payments, c);
-    return '<div class="row"><div><p class="label">Your plan</p><h2>' + esc(c.plan || 'Exercise Library') + '</h2></div>' + (ps ? '<span class="chip ' + (ps === 'Paid' ? 'ok' : 'warn') + '">' + (ps === 'Paid' ? 'Paid this month' : 'Payment due') + '</span>' : '') + '</div>' +
-      '<div class="card dark"><p class="label">Want a program built for you?</p><h3>1-on-1 Online Coaching</h3><p class="small">A custom program, form checks on video, weekly check-ins and calls with ' + COACH.name + '.</p><a class="btn" href="' + COACH.callLink + '" target="_blank" rel="noopener">Book a free call</a></div>' +
-      '<div class="card"><p class="label">Questions</p><p class="small">Call or text ' + COACH.phone + ', or email ' + COACH.email + '.</p></div>' +
-      '<button class="btn ghost block" data-act="signout">Sign out</button>';
-  }
-
-  /* client: weekly check-in */
-  function weeklyScreen() {
-    var D = S.data, wk = weekOf(), cur = (D.weekly || []).find(function (x) { return x.week_of === wk; }), w = S.wk || {};
-    function scale(key, label) { return '<div class="fld"><label>' + label + '</label><div class="scale">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return '<button aria-pressed="' + (w[key] === n ? 'true' : 'false') + '" data-act="wk" data-k="' + key + '" data-v="' + n + '">' + n + '</button>'; }).join('') + '</div></div>'; }
-    var form = cur && cur.coach_reply ? '<div class="card"><p class="ok">This week\'s check-in is done and ' + COACH.name + ' replied.</p></div>' :
-      '<div class="form" id="wkform"><div class="fld"><label for="wk_w">Bodyweight this week (lb)</label><input id="wk_w" inputmode="decimal" value="' + esc(w.weight != null ? w.weight : '') + '" placeholder="e.g. 208.4"></div>' +
-      scale('adherence', 'How well did you stick to the plan? (1–10)') + scale('energy', 'Energy this week (1–10)') +
-      '<div class="fld"><label for="wk_wins">Wins this week</label><textarea id="wk_wins" rows="2">' + esc(w.wins || '') + '</textarea></div>' +
-      '<div class="fld"><label for="wk_str">What was hard?</label><textarea id="wk_str" rows="2">' + esc(w.struggles || '') + '</textarea></div>' +
-      '<div class="fld"><label for="wk_q">Questions for ' + COACH.name + '</label><textarea id="wk_q" rows="2">' + esc(w.questions || '') + '</textarea></div>' +
-      '<div class="fld"><label for="wk_ph">Progress photos (optional)</label><input id="wk_ph" type="file" accept="image/*" multiple></div>' +
-      '<button class="btn block" data-act="saveweekly">' + (cur ? 'Update check-in' : 'Send check-in') + '</button></div>';
-    var hist = (D.weekly || []).map(function (x) {
-      return '<div class="card"><div class="row"><p class="label">Week of ' + esc(fmtShort(x.week_of)) + '</p>' + (x.coach_reply ? '<span class="chip ok">Replied</span>' : '<span class="chip">Sent</span>') + '</div>' +
-        '<p class="small">' + (x.weight != null ? x.weight + ' lb · ' : '') + 'Plan ' + (x.adherence || '—') + '/10 · Energy ' + (x.energy || '—') + '/10</p>' +
-        (x.wins ? '<p class="small"><b>Wins:</b> ' + esc(x.wins) + '</p>' : '') + (x.struggles ? '<p class="small"><b>Hard:</b> ' + esc(x.struggles) + '</p>' : '') + (x.questions ? '<p class="small"><b>Questions:</b> ' + esc(x.questions) + '</p>' : '') +
-        ((x.photo_paths || []).length ? '<div class="phs">' + x.photo_paths.map(thumb).join('') + '</div>' : '') +
-        (x.coach_reply ? '<div class="reply"><p class="label">' + COACH.name + '</p><p>' + esc(x.coach_reply) + '</p></div>' : '') + '</div>';
-    }).join('');
-    return '<div><p class="label">Week of ' + esc(fmtShort(wk)) + '</p><h2>Weekly check-in</h2><p class="muted small">Takes 3 minutes. ' + COACH.name + ' reads every one and replies here.</p></div>' + form +
-      (hist ? '<h3 style="margin-top:8px">Past check-ins</h3>' + hist : '');
-  }
-
-  /* client: form check */
-  function formCheckScreen() {
-    var D = S.data;
-    return '<div><p class="label">Form check</p><h2>Send a video</h2><p class="muted small">Film from the side, full body in frame, 1–3 reps. Keep it under 30 seconds.</p></div>' +
-      '<div class="form"><div class="fld"><label for="fc_ex">Exercise</label><input id="fc_ex" value="' + esc(S.fcEx || '') + '" placeholder="e.g. Kettlebell swing"></div>' +
-      '<div class="fld"><label for="fc_note">What should ' + COACH.name + ' look at? (optional)</label><textarea id="fc_note" rows="2"></textarea></div>' +
-      '<div class="fld"><label for="fc_vid">Video</label><input id="fc_vid" type="file" accept="video/*"></div>' +
-      '<p class="err" id="fcerr" hidden></p><button class="btn block" data-act="sendform">Send form check</button></div>' +
-      ((D.formChecks || []).length ? '<h3 style="margin-top:8px">Your form checks</h3>' + D.formChecks.map(function (x) {
-        return '<div class="card"><div class="row"><p class="label">' + esc(fmtShort(ymd(new Date(x.created_at)))) + '</p>' + (x.coach_reply ? '<span class="chip ok">Replied</span>' : '<span class="chip">Waiting</span>') + '</div><h3>' + esc(x.exercise) + '</h3>' + (x.note ? '<p class="small muted">' + esc(x.note) + '</p>' : '') +
-          (x.video_path ? '<video class="vid" controls playsinline preload="metadata" data-path="' + esc(x.video_path) + '"></video>' : '') +
-          (x.coach_reply ? '<div class="reply"><p class="label">' + COACH.name + '</p><p>' + esc(x.coach_reply) + '</p></div>' : '') + '</div>';
-      }).join('') : '');
-  }
-
-  /* client: progress photos */
-  function photosScreen(list, asCoach) {
-    var by = {}; (list || []).forEach(function (p) { (by[p.taken_on] = by[p.taken_on] || []).push(p); });
-    var days = Object.keys(by).sort().reverse();
-    return (asCoach ? '' : '<div><p class="label">Progress</p><h2>Progress photos</h2><p class="muted small">Same spot, same light, same time of day, every 2–4 weeks. Only you and ' + COACH.name + ' can see these.</p></div>' +
-      '<div class="form"><div class="fld"><label for="ph_pose">Pose</label><select id="ph_pose"><option>Front</option><option>Side</option><option>Back</option></select></div><div class="fld"><label for="ph_file">Photos</label><input id="ph_file" type="file" accept="image/*" multiple></div><button class="btn block" data-act="uploadphotos">Upload</button></div>') +
-      (days.length ? days.map(function (d) { return '<div class="card"><p class="label">' + esc(fmtShort(d)) + '</p><div class="phs">' + by[d].map(function (p) { return '<figure>' + thumb(p.path) + '<figcaption class="small muted">' + esc(p.pose || '') + '</figcaption></figure>'; }).join('') + '</div></div>'; }).join('') : '<p class="muted small">No photos yet.</p>');
-  }
-
-  /* coach: review panes */
-  function coachCheckins(d) {
-    return (d.weekly || []).length ? d.weekly.map(function (x) {
-      return '<div class="card"><div class="row"><p class="label">Week of ' + esc(fmtShort(x.week_of)) + '</p>' + (x.coach_reply ? '<span class="chip ok">Replied</span>' : '<span class="chip warn">Needs reply</span>') + '</div>' +
-        '<p class="small">' + (x.weight != null ? x.weight + ' lb · ' : '') + 'Plan ' + (x.adherence || '—') + '/10 · Energy ' + (x.energy || '—') + '/10</p>' +
-        (x.wins ? '<p class="small"><b>Wins:</b> ' + esc(x.wins) + '</p>' : '') + (x.struggles ? '<p class="small"><b>Hard:</b> ' + esc(x.struggles) + '</p>' : '') + (x.questions ? '<p class="small"><b>Questions:</b> ' + esc(x.questions) + '</p>' : '') +
-        ((x.photo_paths || []).length ? '<div class="phs">' + x.photo_paths.map(thumb).join('') + '</div>' : '') +
-        '<div class="fld"><label for="wr_' + x.id + '">Your reply</label><textarea id="wr_' + x.id + '" rows="3">' + esc(x.coach_reply || '') + '</textarea></div><button class="btn mini" data-act="weeklyreply" data-id="' + x.id + '">' + (x.coach_reply ? 'Update reply' : 'Send reply') + '</button></div>';
-    }).join('') : '<p class="muted small">No weekly check-ins yet.</p>';
-  }
-  function coachForms(d) {
-    return (d.formChecks || []).length ? d.formChecks.map(function (x) {
-      return '<div class="card"><div class="row"><p class="label">' + esc(fmtShort(ymd(new Date(x.created_at)))) + '</p>' + (x.coach_reply ? '<span class="chip ok">Replied</span>' : '<span class="chip warn">Needs reply</span>') + '</div><h3>' + esc(x.exercise) + '</h3>' + (x.note ? '<p class="small">"' + esc(x.note) + '"</p>' : '') +
-        (x.video_path ? '<video class="vid" controls playsinline preload="metadata" data-path="' + esc(x.video_path) + '"></video>' : '<p class="muted small">Video deleted.</p>') +
-        '<div class="fld"><label for="fr_' + x.id + '">Your feedback</label><textarea id="fr_' + x.id + '" rows="3">' + esc(x.coach_reply || '') + '</textarea></div>' +
-        '<div class="row"><button class="btn mini" data-act="formreply" data-id="' + x.id + '">' + (x.coach_reply ? 'Update feedback' : 'Send feedback') + '</button>' + (x.video_path ? '<button class="x" style="width:auto;padding:0 10px" data-act="delvid" data-id="' + x.id + '">Delete video</button>' : '') + '</div></div>';
-    }).join('') + '<p class="muted small">Storage on the free plan is limited, so delete videos once you\'ve given feedback. The feedback stays.</p>' : '<p class="muted small">No form checks yet.</p>';
-  }
-
-  function weeklyCard() {
-    var D = S.data, cur = (D.weekly || []).find(function (x) { return x.week_of === weekOf(); }), last = (D.weekly || [])[0];
-    var newReply = last && last.coach_reply && last.replied_at && ymd(new Date(last.replied_at)) >= WEEK_AGO;
-    return '<button class="card tap" data-go="weekly"><div class="row"><div><p class="label">Weekly check-in</p><h3>' + (newReply ? COACH.name + ' replied to your check-in' : cur ? 'Sent for this week' : 'Due this week') + '</h3></div><span class="chip ' + (newReply ? 'ok' : cur ? 'ok' : 'warn') + '">' + (newReply ? 'Read' : cur ? 'Done' : '3 min') + '</span></div></button>';
-  }
-  function reviewCard() {
-    var D = S.data, W = D.pendWeekly || [], F = D.pendForms || [];
-    if (!W.length && !F.length) return '';
-    return '<div class="card"><p class="label">To review</p>' +
-      W.map(function (x) { var c = cById(x.client_id) || { full_name: '?' }; return '<button class="li tap" data-client="' + x.client_id + '" data-ctab="checkins"><span><b>' + esc(c.full_name) + '</b><br><span class="small muted">Weekly check-in · week of ' + esc(fmtShort(x.week_of)) + '</span></span><span class="chip warn">Reply</span></button>'; }).join('') +
-      F.map(function (x) { var c = cById(x.client_id) || { full_name: '?' }; return '<button class="li tap" data-client="' + x.client_id + '" data-ctab="forms"><span><b>' + esc(c.full_name) + '</b><br><span class="small muted">Form check · ' + esc(x.exercise) + '</span></span><span class="chip warn">Watch</span></button>'; }).join('') + '</div>';
-  }
-
   /* ---------- exercise library ---------- */
   var CATS = ['Feet & ankles', 'Legs', 'Chest', 'Back', 'Shoulders', 'Arms', 'Core', 'Plyos', 'Rotation', 'Static holds', 'Carries', 'Mobility', 'Conditioning'];
   function libMatches(e, f, qy) { return (!f || e.category === f) && (!qy || (e.name + ' ' + (e.equipment || '') + ' ' + (e.cues || '')).toLowerCase().indexOf(qy) > -1); }
@@ -775,15 +602,14 @@
   function templatesList() {
     var D = S.data, t = D.templates || [];
     return '<button class="btn block" data-act="newtpl">+ New template</button>' +
-      (t.length ? '<div class="list">' + t.map(function (x) { var ex = D.tplEx[x.id] || []; return '<button class="li tap" data-act="edittpl" data-id="' + x.id + '"><span><b>' + esc(x.name) + '</b><br><span class="small muted">' + ex.length + ' exercises' + (x.focus ? ' · ' + esc(x.focus) : '') + '</span></span>' + (x.shared ? '<span class="chip ok">Shared</span>' : '') + '</button>'; }).join('') + '</div>' : '<div class="empty">No templates yet. Build one here, or open any client workout and tap "Save as template".</div>');
+      (t.length ? '<div class="list">' + t.map(function (x) { var ex = D.tplEx[x.id] || []; return '<button class="li tap" data-act="edittpl" data-id="' + x.id + '"><span><b>' + esc(x.name) + '</b><br><span class="small muted">' + ex.length + ' exercises' + (x.focus ? ' · ' + esc(x.focus) : '') + '</span></span><span class="chip' + (x.in_person ? ' solid' : '') + '">' + (x.in_person ? 'In person' : 'Own') + '</span></button>'; }).join('') + '</div>' : '<div class="empty">No templates yet. Build one here, or open any client workout and tap "Save as template".</div>');
   }
   function templateEditor() {
     var D = S.data, t = (D.templates || []).find(function (x) { return x.id === S.tplId; }) || {}, ex = t.id ? (D.tplEx[t.id] || []) : [];
     return '<div><p class="label">' + (t.id ? 'Edit template' : 'New template') + '</p><h2>' + esc(t.name || 'New template') + '</h2></div>' +
       '<div class="ed" id="tplcard"><div class="fld"><label for="tp_name">Template name *</label><input id="tp_name" value="' + esc(t.name || '') + '" placeholder="Feet + Hinge A"></div>' +
       '<div style="display:grid;grid-template-columns:1fr 70px;gap:8px"><input id="tp_focus" aria-label="Focus" value="' + esc(t.focus || '') + '" placeholder="Focus, e.g. Lower body"><input id="tp_min" aria-label="Minutes" inputmode="numeric" value="' + esc(t.minutes || '') + '" placeholder="Min"></div>' +
-      '<div class="fld"><label for="tp_desc">Description for members (optional)</label><textarea id="tp_desc" rows="2" placeholder="e.g. 30-minute full-body kettlebell session. Good 2–3x a week.">' + esc(t.description || '') + '</textarea></div>' +
-      '<label class="opt"><input type="checkbox" id="tp_sh"' + (t.shared ? ' checked' : '') + '><span>Share with Exercise Library members</span></label>' +
+      '<label class="opt"><input type="checkbox" id="tp_ip"' + (t.in_person !== false ? ' checked' : '') + '><span>In-person session</span></label>' +
       '<div class="exrow tag"><span>Exercise</span><span>Sets</span><span>Reps</span><span class="ld">Load</span><span></span></div>' +
       ex.map(function (e) { return exRow(e); }).join('') + '<div data-newex></div>' +
       '<div class="row" style="flex-wrap:wrap"><button class="btn mini" data-act="pick">+ From library</button><button class="btn ghost mini" data-act="addexrow">+ Blank</button><button class="btn mini gold" data-act="savetplform" data-id="' + (t.id || '') + '">Save template</button></div>' +
@@ -834,8 +660,7 @@
 
   /* ---------- shell ---------- */
   var CLIENT_TABS = [['today', 'Today', 'today'], ['train', 'Train', 'train'], ['food', 'Food', 'food'], ['chat', 'Chat', 'chat'], ['me', 'Me', 'me']];
-  var MEMBER_TABS = [['library', 'Library', 'train'], ['workouts', 'Workouts', 'today'], ['me', 'Me', 'me']];
-  var COACH_TABS = [['today', 'Today', 'today'], ['clients', 'Clients', 'clients'], ['library', 'Library', 'train'], ['schedule', 'Calls', 'cal'], ['inbox', 'Inbox', 'chat']];
+  var COACH_TABS = [['today', 'Today', 'today'], ['clients', 'Clients', 'clients'], ['library', 'Library', 'train'], ['schedule', 'Schedule', 'cal'], ['inbox', 'Inbox', 'chat']];
   function loginScreen() {
     return '<div class="login">' + MARK + '<div><p class="label">Primal Roots</p><h2>Sign in</h2><p class="muted">Enter your email and we\'ll send you a sign-in link. No password needed.</p></div>' +
       (S.linkSent ? '<div class="card"><p class="ok">Check your email.</p><p>We sent a sign-in link to <b>' + esc(S.linkSent) + '</b>. Open it on this device. It can take a minute, and check spam if you don\'t see it.</p><button class="btn ghost" data-act="resetlogin">Use a different email</button></div>'
@@ -843,37 +668,31 @@
       '<p class="muted small">New here? Book a free intro session at <a href="/book.html">primalroots.fit</a>. Questions? Call or text ' + COACH.phone + '.</p></div>';
   }
   function title() {
-    if (S.role !== 'coach') { if (S.sub === 'workout') return 'Workout'; if (S.sub === 'checkin') return 'Check-in'; if (S.sub === 'addfood') return 'Food log'; if (S.sub === 'weekly') return 'Weekly check-in'; if (S.sub === 'formcheck') return 'Form check'; if (S.sub === 'photos') return 'Progress photos'; if (S.sub === 'library' || S.sub === 'libex') return 'Exercise library'; if (S.sub === 'libtpl') return 'Workout';
-      return { today: 'Primal Roots', train: 'Train', food: 'Food', chat: COACH.name, me: 'My plan', library: 'Exercise library', workouts: 'Workouts' }[S.tab]; }
+    if (S.role !== 'coach') { if (S.sub === 'workout') return 'Workout'; if (S.sub === 'checkin') return 'Check-in'; if (S.sub === 'addfood') return 'Food log';
+      return { today: 'Primal Roots', train: 'Train', food: 'Food', chat: COACH.name, me: 'My plan' }[S.tab]; }
     if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template'; if (S.sub === 'foodedit') return 'Food'; if (S.sub === 'foodimport') return 'Import';
     if (S.tab === 'inbox' && S.chatWith) { var c = cById(S.chatWith); return c ? c.full_name : 'Chat'; }
-    return { today: 'Primal Roots', clients: 'Clients', library: 'Library', schedule: 'Calls', inbox: 'Inbox' }[S.tab];
+    return { today: 'Primal Roots', clients: 'Clients', library: 'Library', schedule: 'Schedule', inbox: 'Inbox' }[S.tab];
   }
   function draw() {
     if (S.loading) { root.innerHTML = '<div class="loading">Loading…</div>'; return; }
     if (!S.session) { root.innerHTML = loginScreen() + toastHtml(); return; }
     var isCoach = S.role === 'coach', body;
-    var lib = !isCoach && S.data.client && isLibPlan(S.data.client), inactive = !isCoach && S.data.client && S.data.client.status !== 'Active';
-    if (lib && ['library', 'workouts', 'me'].indexOf(S.tab) < 0) S.tab = 'library';
     if (!isCoach && !S.data.client) body = noClientScreen();
-    else if (inactive) body = inactiveScreen();
     else if (!isCoach) body = S.sub === 'workout' ? workoutDetail(S.subId) : S.sub === 'checkin' ? checkinScreen() : S.sub === 'addfood' ? addFood() :
-      S.sub === 'weekly' ? weeklyScreen() : S.sub === 'formcheck' ? formCheckScreen() : S.sub === 'photos' ? photosScreen(S.data.photos, false) :
-      S.sub === 'library' ? memberLibrary() : S.sub === 'libex' ? exerciseView() : S.sub === 'libtpl' ? sharedWorkoutView() :
-      ({ today: clientToday, train: clientTrain, food: clientFood, chat: function () { return chatView(S.data.messages, false, S.data.client.id); }, me: lib ? memberMe : clientMe, library: memberLibrary, workouts: memberWorkouts })[S.tab]();
+      ({ today: clientToday, train: clientTrain, food: clientFood, chat: function () { return chatView(S.data.messages, false, S.data.client.id); }, me: clientMe })[S.tab]();
     else body = S.sub === 'client' ? coachClient() : S.sub === 'addclient' ? '<div><p class="label">New client</p><h2>Add client</h2></div>' + clientForm(null) :
       S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'foodedit' ? foodForm() : S.sub === 'foodimport' ? foodImportScreen() : S.sub === 'tpledit' ? templateEditor() :
       ({ today: coachToday, clients: coachClients, library: coachLibrary, schedule: coachSchedule, inbox: coachInbox })[S.tab]();
     var back = !!S.sub || (isCoach && S.tab === 'inbox' && S.chatWith);
-    var tabs = isCoach ? COACH_TABS : lib ? MEMBER_TABS : CLIENT_TABS, showTabs = isCoach || (S.data.client && !inactive);
+    var tabs = isCoach ? COACH_TABS : CLIENT_TABS, showTabs = isCoach || S.data.client;
     root.innerHTML = '<header class="top">' + (back ? '<button class="back" data-act="back">← Back</button>' : MARK) + '<h1>' + esc(title()) + '</h1></header>' +
       '<main class="screen">' + body + '</main>' +
-      (showTabs ? '<nav class="tabs' + (tabs.length === 4 ? ' four' : tabs.length === 3 ? ' three' : '') + '" aria-label="Main">' + tabs.map(function (t) {
+      (showTabs ? '<nav class="tabs' + (tabs.length === 4 ? ' four' : '') + '" aria-label="Main">' + tabs.map(function (t) {
         var dot = isCoach ? (t[0] === 'inbox' && Object.keys(S.data.unread || {}).some(function (k) { return S.data.unread[k]; })) : (t[0] === 'chat' && S.data.unread > 0);
         return '<button class="tab" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : '') + '>' + ICON[t[2]] + t[1] + (dot ? '<i class="dot"></i>' : '') + '</button>';
       }).join('') + '</nav>' : '') + toastHtml();
     if (root.querySelector('.chat')) window.scrollTo(0, document.body.scrollHeight);
-    if (root.querySelector('[data-path]')) hydrateMedia();
   }
   function toastHtml() { return S.toast ? '<div class="toast" role="status">' + esc(S.toast) + '</div>' : ''; }
 
@@ -907,7 +726,6 @@
     var t = e.target;
     if (t.id === 'libq') { S.libQ = t.value; var pos = t.selectionStart; draw(); var li = document.getElementById('libq'); if (li) { li.focus(); li.setSelectionRange(pos, pos); } return; }
     if (t.id === 'foodq') { S.foodQ = t.value; var fp = t.selectionStart; draw(); var fi = document.getElementById('foodq'); if (fi) { fi.focus(); fi.setSelectionRange(fp, fp); } return; }
-    if (t.id === 'mlq') { S.mlQ = t.value; var mp = t.selectionStart; draw(); var mi = document.getElementById('mlq'); if (mi) { mi.focus(); mi.setSelectionRange(mp, mp); } return; }
     if (t.dataset.dl) { S.drafts = S.drafts || {}; (S.drafts[t.dataset.dl] = S.drafts[t.dataset.dl] || {})[t.dataset.f] = t.value; }
   });
   root.addEventListener('change', async function (e) {
@@ -925,8 +743,8 @@
       if (d.tab) { S.tab = d.tab; S.sub = null; S.chatWith = null; window.scrollTo(0, 0);
         if (S.role !== 'coach' && d.tab === 'chat' && D.unread) { D.unread = 0; markRead(D.client.id, 'coach'); }
         return draw(); }
-      if (d.go) { S.sub = d.go; S.subId = d.id; if (d.go === 'formcheck') S.fcEx = d.ex || ''; if (d.go === 'weekly') { var cw = (D.weekly || []).find(function (x) { return x.week_of === weekOf(); }); S.wk = cw ? { weight: cw.weight, adherence: cw.adherence, energy: cw.energy, wins: cw.wins, struggles: cw.struggles, questions: cw.questions } : {}; } if (d.go === 'checkin') { var tc = D.todayCheckin; S.ck = tc ? { weight: tc.weight, sleep: tc.sleep, energy: tc.energy, soreness: tc.soreness, stress: tc.stress, note: tc.note } : {}; } window.scrollTo(0, 0); return draw(); }
-      if (d.client) { S.sub = 'client'; S.ctab = d.ctab || 'overview'; D.detail = null; draw(); await loadDetail(d.client); window.scrollTo(0, 0); return draw(); }
+      if (d.go) { S.sub = d.go; S.subId = d.id; if (d.go === 'checkin') { var tc = D.todayCheckin; S.ck = tc ? { weight: tc.weight, sleep: tc.sleep, energy: tc.energy, soreness: tc.soreness, stress: tc.stress, note: tc.note } : {}; } window.scrollTo(0, 0); return draw(); }
+      if (d.client) { S.sub = 'client'; S.ctab = 'overview'; D.detail = null; draw(); await loadDetail(d.client); window.scrollTo(0, 0); return draw(); }
       if (d.ct) { S.ctab = d.ct; return draw(); }
       switch (d.act) {
         case 'back': if (S.sub) S.sub = null; else S.chatWith = null; window.scrollTo(0, 0); return draw();
@@ -1048,62 +866,6 @@
           S.guideDraft = null; return toast('Meal guide saved. All clients see it now.');
         }
         case 'libcat': S.libCat = d.v; return draw();
-        case 'mlcat': S.mlCat = d.v; return draw();
-        case 'viewex': S.sub = 'libex'; S.subId = d.id; window.scrollTo(0, 0); return draw();
-        case 'viewtpl': S.sub = 'libtpl'; S.subId = d.id; window.scrollTo(0, 0); return draw();
-        case 'wk': S.wk = S.wk || {}; S.wk[d.k] = +d.v; S.wk.weight = val('wk_w') || S.wk.weight; S.wk.wins = val('wk_wins'); S.wk.struggles = val('wk_str'); S.wk.questions = val('wk_q'); return draw();
-        case 'saveweekly': {
-          var wkf = document.getElementById('wk_ph'), wfiles = wkf ? Array.prototype.slice.call(wkf.files || []) : [], wk = weekOf();
-          var prev = (D.weekly || []).find(function (x) { return x.week_of === wk; });
-          t.disabled = true; t.textContent = wfiles.length ? 'Uploading photos…' : 'Sending…';
-          var wpaths = (prev && prev.photo_paths) || [];
-          for (var wi = 0; wi < wfiles.length; wi++) wpaths = wpaths.concat([await uploadMedia(wfiles[wi], 'checkins')]);
-          var w0 = S.wk || {}, wrow = { client_id: D.client.id, week_of: wk, weight: val('wk_w') ? +val('wk_w') : null, adherence: w0.adherence || null, energy: w0.energy || null, wins: val('wk_wins') || null, struggles: val('wk_str') || null, questions: val('wk_q') || null, photo_paths: wpaths };
-          var wsaved = await q(sb.from('weekly_checkins').upsert(wrow, { onConflict: 'client_id,week_of' }).select().single());
-          D.weekly = [wsaved].concat((D.weekly || []).filter(function (x) { return x.week_of !== wk; }));
-          if (wrow.weight != null) { try { await q(sb.from('checkins').upsert({ client_id: D.client.id, day: TODAY, weight: wrow.weight }, { onConflict: 'client_id,day' })); } catch (e) { console.warn(e); } }
-          S.sub = null; S.wk = {}; window.scrollTo(0, 0); return toast('Check-in sent. ' + COACH.name + ' will reply here.');
-        }
-        case 'sendform': {
-          var fv = document.getElementById('fc_vid'), ff = fv && fv.files && fv.files[0], fex = val('fc_ex'), ferr = document.getElementById('fcerr');
-          if (!fex || !ff) { ferr.textContent = 'Add the exercise name and choose a video.'; ferr.hidden = false; return; }
-          t.disabled = true; t.textContent = 'Uploading…';
-          try {
-            var fpath = await uploadMedia(ff, 'form');
-            var frow2 = await q(sb.from('form_checks').insert({ client_id: D.client.id, exercise: fex, note: val('fc_note') || null, video_path: fpath }).select().single());
-            D.formChecks = [frow2].concat(D.formChecks || []);
-          } catch (x2) { t.disabled = false; t.textContent = 'Send form check'; ferr.textContent = x2.message || 'Upload failed. Try again on Wi-Fi.'; ferr.hidden = false; return; }
-          S.fcEx = ''; window.scrollTo(0, 0); return toast('Sent. ' + COACH.name + ' will review it and reply here.');
-        }
-        case 'uploadphotos': {
-          var pf = document.getElementById('ph_file'), pfiles = pf ? Array.prototype.slice.call(pf.files || []) : [];
-          if (!pfiles.length) return toastLite('Choose at least one photo.');
-          t.disabled = true; t.textContent = 'Uploading…';
-          var prow = [];
-          for (var pi = 0; pi < pfiles.length; pi++) prow.push({ client_id: D.client.id, taken_on: TODAY, pose: val('ph_pose') || null, path: await uploadMedia(pfiles[pi], 'photos') });
-          var pins = await q(sb.from('progress_photos').insert(prow).select());
-          D.photos = pins.concat(D.photos || []);
-          return toast('Photos saved.');
-        }
-        case 'weeklyreply': case 'formreply': {
-          var isW = d.act === 'weeklyreply', txt = val((isW ? 'wr_' : 'fr_') + d.id);
-          if (!txt) return toastLite('Write a reply first.');
-          var tbl = isW ? 'weekly_checkins' : 'form_checks';
-          var upd = await q(sb.from(tbl).update({ coach_reply: txt, replied_at: new Date().toISOString() }).eq('id', d.id).select().single());
-          var key = isW ? 'weekly' : 'formChecks';
-          D.detail[key] = D.detail[key].map(function (x) { return x.id === upd.id ? upd : x; });
-          if (isW) D.pendWeekly = (D.pendWeekly || []).filter(function (x) { return x.id !== d.id; }); else D.pendForms = (D.pendForms || []).filter(function (x) { return x.id !== d.id; });
-          try { await q(sb.from('messages').insert({ client_id: D.detail.client.id, sender: 'coach', body: isW ? 'I replied to your weekly check-in. Open Today → Weekly check-in to read it.' : 'I left feedback on your ' + upd.exercise + ' form check. Open Today → Form check to see it.' }).select().single()); } catch (e) { console.warn(e); }
-          return toast(isW ? 'Reply sent.' : 'Feedback sent.');
-        }
-        case 'delvid': {
-          if (t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to delete video'; return; }
-          var fc = D.detail.formChecks.find(function (x) { return x.id === d.id; });
-          if (fc && fc.video_path) { var rr = await sb.storage.from(MEDIA).remove([fc.video_path]); if (rr.error) throw rr.error; }
-          var fu = await q(sb.from('form_checks').update({ video_path: null }).eq('id', d.id).select().single());
-          D.detail.formChecks = D.detail.formChecks.map(function (x) { return x.id === fu.id ? fu : x; });
-          return toast('Video deleted. Your feedback is kept.');
-        }
         case 'foodview': S.foodView = d.v; window.scrollTo(0, 0); return draw();
         case 'foodf': S.foodF = d.v; return draw();
         case 'habit': {
@@ -1194,7 +956,7 @@
         case 'edittpl': S.sub = 'tpledit'; S.tplId = d.id; window.scrollTo(0, 0); return draw();
         case 'savetplform': {
           var tname = val('tp_name'); if (!tname) return toastLite('Name the template first.');
-          var trow = { name: tname, focus: val('tp_focus') || null, minutes: +val('tp_min') || null, description: val('tp_desc') || null, shared: checked('tp_sh') };
+          var trow = { name: tname, focus: val('tp_focus') || null, minutes: +val('tp_min') || null, in_person: checked('tp_ip') };
           var texs0 = readExRows(document.getElementById('tplcard'));
           var tsaved = d.id ? await q(sb.from('workout_templates').update(trow).eq('id', d.id).select().single()) : await q(sb.from('workout_templates').insert(trow).select().single());
           var texs = texs0.map(function (r) { return Object.assign(r, { template_id: tsaved.id }); });
@@ -1210,14 +972,14 @@
         case 'savetpl': {
           var wk = D.detail.workouts.find(function (w) { return w.id === d.id; }), wex = D.detail.exercises[d.id] || [];
           if (!wex.length) return toastLite('Save the workout with exercises first.');
-          var nt = await q(sb.from('workout_templates').insert({ name: wk.title, focus: wk.focus, minutes: wk.minutes }).select().single());
+          var nt = await q(sb.from('workout_templates').insert({ name: wk.title, focus: wk.focus, minutes: wk.minutes, in_person: wk.in_person }).select().single());
           D.tplEx[nt.id] = await q(sb.from('template_exercises').insert(wex.map(function (e, i) { return { template_id: nt.id, library_id: e.library_id || null, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }; })).select());
           D.templates = (D.templates || []).concat([nt]).sort(function (a, b) { return a.name.localeCompare(b.name); });
           return toast('Saved "' + wk.title + '" as a template.');
         }
         case 'applytpl': {
           var tid = val('tpl_pick'), tp = D.templates.find(function (x) { return x.id === tid; }), tex = D.tplEx[tid] || [];
-          var nw = await q(sb.from('workouts').insert({ program_id: D.detail.program.id, client_id: D.detail.client.id, position: D.detail.workouts.length, title: tp.name, focus: tp.focus, minutes: tp.minutes }).select().single());
+          var nw = await q(sb.from('workouts').insert({ program_id: D.detail.program.id, client_id: D.detail.client.id, position: D.detail.workouts.length, title: tp.name, focus: tp.focus, minutes: tp.minutes, in_person: tp.in_person }).select().single());
           D.detail.workouts.push(nw);
           D.detail.exercises[nw.id] = tex.length ? await q(sb.from('exercises').insert(tex.map(function (e, i) { return { workout_id: nw.id, client_id: D.detail.client.id, library_id: e.library_id, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }; })).select()) : [];
           toast('Added "' + tp.name + '". Adjust it for this client if needed.'); return draw();

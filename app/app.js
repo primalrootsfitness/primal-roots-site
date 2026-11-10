@@ -282,9 +282,10 @@
       q(sb.from('template_exercises').select('*').order('position')).catch(function () { return []; }),
       q(sb.from('meal_guide').select('*').eq('id', 1).maybeSingle()).catch(function () { return null; }),
       q(sb.from('habits').select('*').order('position')).catch(function () { return []; }),
-      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; })
+      q(sb.from('food_items').select('*').order('category').order('name')).catch(function () { return []; }),
+      q(sb.from('program_templates').select('*').order('name')).catch(function () { return []; })
     ]);
-    D.guide = res[8]; D.habits = res[9]; D.foods = res[10];
+    D.guide = res[8]; D.habits = res[9]; D.foods = res[10]; D.progTpl = res[11];
     D.library = res[5]; D.templates = res[6]; D.tplEx = {};
     res[7].forEach(function (e) { (D.tplEx[e.template_id] = D.tplEx[e.template_id] || []).push(e); });
     D.clients = res[0]; D.sessions = res[1]; D.payments = res[2];
@@ -421,9 +422,10 @@
     return head + body;
   }
   function programEditor(d) {
-    if (!d.program) return '<div class="ed"><p class="label">Create a program</p><div class="fld"><label for="pg_name">Program name</label><input id="pg_name" value="Ground Up — Phase 1"></div><div class="fld"><label for="pg_weeks">Weeks</label><input id="pg_weeks" inputmode="numeric" value="4"></div><button class="btn mini" data-act="createprogram">Create program</button></div>';
+    var quick = (S.data.progTpl || []).length ? '<div class="ed"><p class="label">' + (d.program ? 'Switch to a program template' : 'Assign a program template') + '</p><select id="pt_pick">' + S.data.progTpl.map(function (x) { return '<option value="' + x.id + '">' + esc(x.name) + ' (' + (x.days || []).length + ' workouts/wk)</option>'; }).join('') + '</select><button class="btn mini" data-act="assignone">Assign to ' + esc(first(d.client.full_name)) + '</button></div>' : '';
+    if (!d.program) return quick + '<div class="ed"><p class="label">Or build one from scratch</p><div class="fld"><label for="pg_name">Program name</label><input id="pg_name" value="Ground Up — Phase 1"></div><div class="fld"><label for="pg_weeks">Weeks</label><input id="pg_weeks" inputmode="numeric" value="4"></div><button class="btn mini" data-act="createprogram">Create program</button></div>';
     var p = d.program;
-    return '<div class="ed"><div class="row"><p class="label">Program</p></div><div class="fld"><label for="pg_name">Name</label><input id="pg_name" value="' + esc(p.name) + '"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="small">Current week<input id="pg_cur" inputmode="numeric" value="' + esc(p.current_week || 1) + '"></label><label class="small">Total weeks<input id="pg_weeks" inputmode="numeric" value="' + esc(p.weeks || 4) + '"></label></div><button class="btn mini ghost" data-act="saveprogram">Save program</button></div>' +
+    return quick + '<div class="ed"><div class="row"><p class="label">Program</p></div><div class="fld"><label for="pg_name">Name</label><input id="pg_name" value="' + esc(p.name) + '"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="small">Current week<input id="pg_cur" inputmode="numeric" value="' + esc(p.current_week || 1) + '"></label><label class="small">Total weeks<input id="pg_weeks" inputmode="numeric" value="' + esc(p.weeks || 4) + '"></label></div><button class="btn mini ghost" data-act="saveprogram">Save program</button></div>' +
       d.workouts.map(function (w) {
         var ex = d.exercises[w.id] || [];
         return '<div class="ed" data-wid="' + w.id + '"><div style="display:grid;grid-template-columns:80px 1fr;gap:8px"><input aria-label="Day" data-w="day_label" value="' + esc(w.day_label || '') + '" placeholder="Mon"><input aria-label="Workout title" data-w="title" value="' + esc(w.title) + '" placeholder="Workout title"></div>' +
@@ -434,6 +436,7 @@
           '<div data-newex></div><div class="row" style="flex-wrap:wrap"><button class="btn mini" data-act="pick">+ From library</button><button class="btn ghost mini" data-act="addexrow">+ Blank</button><button class="btn mini gold" data-act="saveworkout" data-id="' + w.id + '">Save workout</button></div><div class="row"><button class="x" style="width:auto;padding:0 10px" data-act="savetpl" data-id="' + w.id + '">Save as template</button><button class="x" style="width:auto;padding:0 10px" data-act="delworkout" data-id="' + w.id + '">Delete workout</button></div></div>';
       }).join('') +
       '<button class="btn ghost block" data-act="addworkout">+ Add blank workout</button>' +
+      (d.workouts.length ? '<button class="btn ghost block" data-act="saveasprog">Save this program as a template</button>' : '') +
       ((S.data.templates || []).length ? '<div class="ed"><p class="label">Add a workout from a template</p><select id="tpl_pick">' + S.data.templates.map(function (t) { return '<option value="' + t.id + '">' + esc(t.name) + ' (' + ((S.data.tplEx[t.id] || []).length) + ' exercises)</option>'; }).join('') + '</select><button class="btn mini" data-act="applytpl">Add to this program</button></div>' : '<p class="muted small">Tip: save a workout as a template to reuse it for other clients in one tap.</p>');
   }
   function exRow(e) {
@@ -601,9 +604,60 @@
   }
   function templatesList() {
     var D = S.data, t = D.templates || [];
-    return '<button class="btn block" data-act="newtpl">+ New template</button>' +
+    return programsList() + '<div class="row" style="margin-top:12px"><div><p class="label">Workouts</p><p class="muted small" style="margin:0">Single workouts. Programs are built from these.</p></div><button class="btn mini" data-act="newtpl">+ New</button></div>' +
       (t.length ? '<div class="list">' + t.map(function (x) { var ex = D.tplEx[x.id] || []; return '<button class="li tap" data-act="edittpl" data-id="' + x.id + '"><span><b>' + esc(x.name) + '</b><br><span class="small muted">' + ex.length + ' exercises' + (x.focus ? ' · ' + esc(x.focus) : '') + '</span></span><span class="chip' + (x.in_person ? ' solid' : '') + '">' + (x.in_person ? 'In person' : 'Own') + '</span></button>'; }).join('') + '</div>' : '<div class="empty">No templates yet. Build one here, or open any client workout and tap "Save as template".</div>');
   }
+
+  /* ---------- program templates: build once, assign to many ---------- */
+  function programsList() {
+    var P = S.data.progTpl || [];
+    return '<div class="row"><div><p class="label">Programs</p><p class="muted small" style="margin:0">A full week of workouts. Assign one to as many clients as you want in one tap.</p></div><button class="btn mini" data-act="newpt">+ New</button></div>' +
+      (P.length ? '<div class="list">' + P.map(function (x) { var n = (x.days || []).length; return '<div class="li"><button class="tap" style="all:unset;cursor:pointer;flex:1;min-width:0" data-act="editpt" data-id="' + x.id + '"><b>' + esc(x.name) + '</b><br><span class="small muted">' + n + ' workout' + (n === 1 ? '' : 's') + ' a week · ' + (x.weeks || 4) + ' weeks</span></button><button class="btn mini" data-act="assignpt" data-id="' + x.id + '">Assign</button></div>'; }).join('') + '</div>'
+        : '<div class="empty">No programs yet. Tap + New, or open a client\'s Training tab and tap "Save this program as a template."</div>');
+  }
+  function ptRow(day) {
+    day = day || {}; var T = S.data.templates || [];
+    return '<div class="ptrow" data-pt><input data-pd aria-label="Day" value="' + esc(day.day_label || '') + '" placeholder="Mon"><select data-pw aria-label="Workout">' + T.map(function (t) { return '<option value="' + t.id + '"' + (t.id === day.template_id ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select><button class="x" data-act="rmptrow" aria-label="Remove day">×</button></div>';
+  }
+  function ptEditor() {
+    var x = (S.data.progTpl || []).find(function (y) { return y.id === S.ptId; }) || { days: [] };
+    if (!(S.data.templates || []).length) return '<div class="empty">Save some workout templates first. A program is a week of them.</div>';
+    return '<div><p class="label">' + (x.id ? 'Edit program' : 'New program') + '</p><h2>' + esc(x.name || 'New program') + '</h2></div>' +
+      '<div class="ed" id="ptcard"><div class="fld"><label for="pt_name">Program name *</label><input id="pt_name" value="' + esc(x.name || '') + '" placeholder="Ground Up · Phase 1"></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 90px;gap:8px"><div class="fld"><label for="pt_desc">Notes (optional)</label><input id="pt_desc" value="' + esc(x.description || '') + '" placeholder="e.g. Beginners, 3 days a week"></div><div class="fld"><label for="pt_weeks">Weeks</label><input id="pt_weeks" inputmode="numeric" value="' + esc(x.weeks || 4) + '"></div></div>' +
+      '<p class="label">Workouts each week</p><div id="ptrows" style="display:grid;gap:6px">' + ((x.days && x.days.length) ? x.days.map(ptRow).join('') : ptRow({ day_label: 'Mon' })) + '</div>' +
+      '<button class="btn ghost mini" data-act="addptrow">+ Add a day</button>' +
+      '<button class="btn block" data-act="savept" data-id="' + (x.id || '') + '">Save program</button>' +
+      (x.id ? '<button class="x" style="width:auto;padding:0 10px;justify-self:start" data-act="delpt" data-id="' + x.id + '">Delete program</button>' : '') + '</div>';
+  }
+  function assignScreen() {
+    var x = (S.data.progTpl || []).find(function (y) { return y.id === S.ptId; }); if (!x) return '';
+    var C = S.data.clients.filter(function (c) { return c.status === 'Active'; }), cur = S.curProgs || {};
+    return '<div><p class="label">Assign program</p><h2>' + esc(x.name) + '</h2><p class="muted small">Each client you pick gets their own copy, so you can still tweak anyone\'s afterward. Their current program is archived, not deleted.</p></div>' +
+      (C.length ? '<div class="row"><button class="btn ghost mini" data-act="selall">Select all</button><button class="btn ghost mini" data-act="selnone">Clear</button></div>' +
+        '<div class="list" id="assignlist">' + C.map(function (c) { return '<label class="li opt" style="gap:12px"><input type="checkbox" data-cid="' + c.id + '"><span style="flex:1;min-width:0"><b>' + esc(c.full_name) + '</b><br><span class="small muted">' + (cur[c.id] ? 'Now: ' + esc(cur[c.id]) : 'No program yet') + '</span></span></label>'; }).join('') + '</div>' +
+        '<button class="btn block" data-act="doassign">Assign to selected clients</button>' : '<div class="empty">No active clients yet.</div>');
+  }
+  /* Copy a program template to many clients with 4 database calls total. */
+  async function assignProgram(pt, clientIds) {
+    var T = {}; (S.data.templates || []).forEach(function (t) { T[t.id] = t; });
+    var days = (pt.days || []).filter(function (d) { return T[d.template_id]; });
+    if (!days.length) throw new Error('This program has no workouts. Edit it and add some days.');
+    await q(sb.from('programs').update({ active: false }).in('client_id', clientIds).eq('active', true));
+    var progs = await q(sb.from('programs').insert(clientIds.map(function (cid) { return { client_id: cid, name: pt.name, weeks: pt.weeks || 4, current_week: 1, active: true }; })).select());
+    var wrows = [];
+    progs.forEach(function (p) { days.forEach(function (d, i) { var t = T[d.template_id]; wrows.push({ program_id: p.id, client_id: p.client_id, position: i, day_label: d.day_label || null, title: t.name, focus: t.focus, minutes: t.minutes, in_person: t.in_person }); }); });
+    var ws = await q(sb.from('workouts').insert(wrows).select());
+    var erows = [];
+    ws.forEach(function (w) {
+      var d = days[w.position]; (S.data.tplEx[d.template_id] || []).forEach(function (e, i) {
+        erows.push({ workout_id: w.id, client_id: w.client_id, library_id: e.library_id || null, position: i, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url });
+      });
+    });
+    if (erows.length) await q(sb.from('exercises').insert(erows).select());
+    return progs.length;
+  }
+
   function templateEditor() {
     var D = S.data, t = (D.templates || []).find(function (x) { return x.id === S.tplId; }) || {}, ex = t.id ? (D.tplEx[t.id] || []) : [];
     return '<div><p class="label">' + (t.id ? 'Edit template' : 'New template') + '</p><h2>' + esc(t.name || 'New template') + '</h2></div>' +
@@ -670,7 +724,7 @@
   function title() {
     if (S.role !== 'coach') { if (S.sub === 'workout') return 'Workout'; if (S.sub === 'checkin') return 'Check-in'; if (S.sub === 'addfood') return 'Food log';
       return { today: 'Primal Roots', train: 'Train', food: 'Food', chat: COACH.name, me: 'My plan' }[S.tab]; }
-    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template'; if (S.sub === 'foodedit') return 'Food'; if (S.sub === 'foodimport') return 'Import';
+    if (S.sub === 'client') return 'Client'; if (S.sub === 'addclient') return 'Add client'; if (S.sub === 'libedit') return 'Exercise'; if (S.sub === 'libimport') return 'Import'; if (S.sub === 'tpledit') return 'Template'; if (S.sub === 'ptedit') return 'Program'; if (S.sub === 'assign') return 'Assign'; if (S.sub === 'foodedit') return 'Food'; if (S.sub === 'foodimport') return 'Import';
     if (S.tab === 'inbox' && S.chatWith) { var c = cById(S.chatWith); return c ? c.full_name : 'Chat'; }
     return { today: 'Primal Roots', clients: 'Clients', library: 'Library', schedule: 'Schedule', inbox: 'Inbox' }[S.tab];
   }
@@ -682,7 +736,7 @@
     else if (!isCoach) body = S.sub === 'workout' ? workoutDetail(S.subId) : S.sub === 'checkin' ? checkinScreen() : S.sub === 'addfood' ? addFood() :
       ({ today: clientToday, train: clientTrain, food: clientFood, chat: function () { return chatView(S.data.messages, false, S.data.client.id); }, me: clientMe })[S.tab]();
     else body = S.sub === 'client' ? coachClient() : S.sub === 'addclient' ? '<div><p class="label">New client</p><h2>Add client</h2></div>' + clientForm(null) :
-      S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'foodedit' ? foodForm() : S.sub === 'foodimport' ? foodImportScreen() : S.sub === 'tpledit' ? templateEditor() :
+      S.sub === 'ptedit' ? ptEditor() : S.sub === 'assign' ? assignScreen() : S.sub === 'libedit' ? libForm() : S.sub === 'libimport' ? importScreen() : S.sub === 'foodedit' ? foodForm() : S.sub === 'foodimport' ? foodImportScreen() : S.sub === 'tpledit' ? templateEditor() :
       ({ today: coachToday, clients: coachClients, library: coachLibrary, schedule: coachSchedule, inbox: coachInbox })[S.tab]();
     var back = !!S.sub || (isCoach && S.tab === 'inbox' && S.chatWith);
     var tabs = isCoach ? COACH_TABS : CLIENT_TABS, showTabs = isCoach || S.data.client;
@@ -952,6 +1006,56 @@
           S.sub = null; S.tab = 'library'; return toast('Imported ' + ins2.length + ' exercises' + (bad.length ? '. Skipped rows ' + bad.join(', ') + ' (missing name or section).' : '.'));
         }
         case 'pick': { var cont = t.closest('.ed').querySelector('[data-newex]'); if (!(D.library || []).length) return toastLite('Your library is empty. Add exercises in the Library tab first.'); openPicker(cont); return; }
+        case 'newpt': S.sub = 'ptedit'; S.ptId = null; window.scrollTo(0, 0); return draw();
+        case 'editpt': S.sub = 'ptedit'; S.ptId = d.id; window.scrollTo(0, 0); return draw();
+        case 'addptrow': document.getElementById('ptrows').insertAdjacentHTML('beforeend', ptRow(null)); return;
+        case 'rmptrow': t.closest('[data-pt]').remove(); return;
+        case 'savept': {
+          var pname = val('pt_name'); if (!pname) return toastLite('Name the program first.');
+          var pdays = []; document.querySelectorAll('#ptrows [data-pt]').forEach(function (el) { pdays.push({ day_label: el.querySelector('[data-pd]').value.trim(), template_id: el.querySelector('[data-pw]').value }); });
+          if (!pdays.length) return toastLite('Add at least one workout.');
+          var prow = { name: pname, description: val('pt_desc') || null, weeks: +val('pt_weeks') || 4, days: pdays };
+          var psaved = d.id ? await q(sb.from('program_templates').update(prow).eq('id', d.id).select().single()) : await q(sb.from('program_templates').insert(prow).select().single());
+          D.progTpl = (D.progTpl || []).filter(function (x) { return x.id !== psaved.id; }).concat([psaved]).sort(function (a, b) { return a.name.localeCompare(b.name); });
+          S.sub = null; S.tab = 'library'; S.libView = 'tpl'; return toast('Program saved. Tap Assign to give it to clients.');
+        }
+        case 'delpt': {
+          if (t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to delete'; return; }
+          await q(sb.from('program_templates').delete().eq('id', d.id)); D.progTpl = D.progTpl.filter(function (x) { return x.id !== d.id; }); S.sub = null; return toast('Program deleted. Clients keep their copies.');
+        }
+        case 'assignpt': {
+          S.ptId = d.id; S.curProgs = {};
+          var cps = await q(sb.from('programs').select('client_id,name').eq('active', true));
+          cps.forEach(function (x) { S.curProgs[x.client_id] = x.name; });
+          S.sub = 'assign'; window.scrollTo(0, 0); return draw();
+        }
+        case 'selall': case 'selnone': document.querySelectorAll('#assignlist [data-cid]').forEach(function (c) { c.checked = d.act === 'selall'; }); return;
+        case 'doassign': {
+          var ids = []; document.querySelectorAll('#assignlist [data-cid]').forEach(function (c) { if (c.checked) ids.push(c.dataset.cid); });
+          if (!ids.length) return toastLite('Pick at least one client.');
+          var apt = D.progTpl.find(function (x) { return x.id === S.ptId; });
+          t.disabled = true; t.textContent = 'Assigning…';
+          var n = await assignProgram(apt, ids);
+          S.sub = null; S.tab = 'library'; S.libView = 'tpl'; return toast('Assigned "' + apt.name + '" to ' + n + ' client' + (n === 1 ? '' : 's') + '.');
+        }
+        case 'assignone': {
+          var opt = D.progTpl.find(function (x) { return x.id === val('pt_pick'); });
+          if (D.detail.program && t.dataset.confirm !== '1') { t.dataset.confirm = '1'; t.textContent = 'Tap again to replace current program'; return; }
+          await assignProgram(opt, [D.detail.client.id]);
+          await loadDetail(D.detail.client.id); return toast('Assigned "' + opt.name + '".');
+        }
+        case 'saveasprog': {
+          var P0 = D.detail.program, W0 = D.detail.workouts;
+          var nts = await q(sb.from('workout_templates').insert(W0.map(function (w, i) { return { name: P0.name + ' · ' + (w.day_label || 'Day ' + (i + 1)) + ' · ' + w.title, focus: w.focus, minutes: w.minutes, in_person: w.in_person }; })).select());
+          var tex = [];
+          nts.forEach(function (tt, i) { (D.detail.exercises[W0[i].id] || []).forEach(function (e, j) { tex.push({ template_id: tt.id, library_id: e.library_id || null, position: j, name: e.name, sets: e.sets, reps: e.reps, load: e.load, detail: e.detail, video_url: e.video_url }); }); });
+          var tins = tex.length ? await q(sb.from('template_exercises').insert(tex).select()) : [];
+          nts.forEach(function (tt) { D.tplEx[tt.id] = tins.filter(function (e) { return e.template_id === tt.id; }); });
+          D.templates = (D.templates || []).concat(nts).sort(function (a, b) { return a.name.localeCompare(b.name); });
+          var np = await q(sb.from('program_templates').insert({ name: P0.name, weeks: P0.weeks || 4, days: nts.map(function (tt, i) { return { day_label: W0[i].day_label || '', template_id: tt.id }; }) }).select().single());
+          D.progTpl = (D.progTpl || []).concat([np]).sort(function (a, b) { return a.name.localeCompare(b.name); });
+          return toast('Saved "' + P0.name + '" as a program. Assign it from Library → Templates.');
+        }
         case 'newtpl': S.sub = 'tpledit'; S.tplId = null; window.scrollTo(0, 0); return draw();
         case 'edittpl': S.sub = 'tpledit'; S.tplId = d.id; window.scrollTo(0, 0); return draw();
         case 'savetplform': {

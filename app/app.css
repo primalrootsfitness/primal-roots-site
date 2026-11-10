@@ -157,3 +157,6 @@ select.inline{border:1px solid #c9c4ba;padding:6px 8px;font:400 13px/1.2 var(--u
 .vid{width:100%;max-height:420px;background:#000;display:block}
 .reply{border-left:3px solid var(--rust);background:var(--mist);padding:10px 12px;display:grid;gap:4px}
 .reply p{margin:0}
+.ptrow{display:grid;grid-template-columns:70px 1fr 36px;gap:6px;align-items:center}
+.ptrow input,.ptrow select{border:1px solid #c9c4ba;padding:8px;min-width:0;font:inherit;background:#fff}
+.btn.mini{white-space:nowrap}

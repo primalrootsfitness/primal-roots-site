@@ -192,7 +192,7 @@
   function workoutDetail(id) {
     var D = S.data, w = D.workouts.find(function (x) { return x.id === id; }); if (!w) return '';
     var ex = D.exercises[id] || [];
-    return '<div><p class="label">' + esc(w.day_label || '') + (w.focus ? ' · ' + esc(w.focus) : '') + '</p><h2>' + esc(w.title) + '</h2></div>' +
+    return '<div><p class="label">' + esc([w.day_label, w.focus].filter(Boolean).join(' · ')) + '</p><h2>' + esc(w.title) + '</h2></div>' +
       ex.map(function (e) {
         var sets = '';
         for (var s = 1; s <= (e.sets || 1); s++) {
@@ -423,6 +423,8 @@
   }
   function programEditor(d) {
     var quick = (S.data.progTpl || []).length ? '<div class="ed"><p class="label">' + (d.program ? 'Switch to a program template' : 'Assign a program template') + '</p><select id="pt_pick">' + S.data.progTpl.map(function (x) { return '<option value="' + x.id + '">' + esc(x.name) + ' (' + (x.days || []).length + ' workouts/wk)</option>'; }).join('') + '</select><button class="btn mini" data-act="assignone">Assign to ' + esc(first(d.client.full_name)) + '</button></div>' : '';
+    var qbtn = '<div class="ed"><p class="label">Quick workout</p><p class="muted small" style="margin:0">Pick 3–6 exercises from your library. Sets, reps, cues and demo videos fill in automatically.</p><button class="btn block" data-act="quickwo">Pick exercises</button></div>';
+    quick = qbtn + quick;
     if (!d.program) return quick + '<div class="ed"><p class="label">Or build one from scratch</p><div class="fld"><label for="pg_name">Program name</label><input id="pg_name" value="Ground Up — Phase 1"></div><div class="fld"><label for="pg_weeks">Weeks</label><input id="pg_weeks" inputmode="numeric" value="4"></div><button class="btn mini" data-act="createprogram">Create program</button></div>';
     var p = d.program;
     return quick + '<div class="ed"><div class="row"><p class="label">Program</p></div><div class="fld"><label for="pg_name">Name</label><input id="pg_name" value="' + esc(p.name) + '"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="small">Current week<input id="pg_cur" inputmode="numeric" value="' + esc(p.current_week || 1) + '"></label><label class="small">Total weeks<input id="pg_weeks" inputmode="numeric" value="' + esc(p.weeks || 4) + '"></label></div><button class="btn mini ghost" data-act="saveprogram">Save program</button></div>' +
@@ -670,22 +672,23 @@
       (t.id ? '<button class="x" style="width:auto;padding:0 10px;justify-self:start" data-act="deltpl" data-id="' + t.id + '">Delete template</button>' : '') + '</div>';
   }
   function libRowToEx(e) { return { name: e.name, sets: e.default_sets || 3, reps: e.default_reps || '', load: e.default_load || '', detail: e.cues || '', video_url: e.video_url || '', library_id: e.id }; }
-  function openPicker(container) {
+  function openPicker(container, onDone) {
     var lib = S.data.library || [], sel = {}, cat = '', qy = '';
     var ov = document.createElement('div'); ov.className = 'picker'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Pick exercises');
     function render() {
       var list = lib.filter(function (e) { return libMatches(e, cat, qy); }), n = Object.keys(sel).length;
-      ov.innerHTML = '<div class="pk"><div class="row"><h3>Add from library</h3><button class="x" data-pk="close" aria-label="Close">×</button></div>' +
+      ov.innerHTML = '<div class="pk"><div class="row"><h3>' + (onDone ? 'Pick 3–6 exercises' : 'Add from library') + '</h3><button class="x" data-pk="close" aria-label="Close">×</button></div>' +
         '<input type="search" data-pk="q" placeholder="Search" value="' + esc(qy) + '" aria-label="Search">' +
         '<div class="cats"><button class="chip' + (!cat ? ' on' : '') + '" data-pk="cat" data-v="">All</button>' + CATS.map(function (c) { return lib.some(function (e) { return e.category === c; }) ? '<button class="chip' + (cat === c ? ' on' : '') + '" data-pk="cat" data-v="' + esc(c) + '">' + esc(c) + '</button>' : ''; }).join('') + '</div>' +
         '<div class="pklist">' + (list.length ? list.map(function (e) { return '<label class="pkrow"><input type="checkbox" data-pk="sel" value="' + e.id + '"' + (sel[e.id] ? ' checked' : '') + '><span><b>' + esc(e.name) + '</b><br><span class="small muted">' + esc(e.category) + ' · ' + (e.default_sets || '') + ' × ' + esc(e.default_reps || '') + (e.default_load ? ' · ' + esc(e.default_load) : '') + (e.video_url ? ' · video' : '') + '</span></span></label>'; }).join('') : '<p class="muted small">No exercises match. Add them in the Library tab.</p>') + '</div>' +
-        '<button class="btn block" data-pk="add"' + (n ? '' : ' disabled') + '>Add ' + (n || '') + ' exercise' + (n === 1 ? '' : 's') + '</button></div>';
+        '<button class="btn block" data-pk="add"' + (n ? '' : ' disabled') + '>' + (onDone ? 'Create workout' + (n ? ' (' + n + ')' : '') : 'Add ' + (n || '') + ' exercise' + (n === 1 ? '' : 's')) + '</button></div>';
     }
     ov.addEventListener('click', function (e) {
       var b = e.target.closest('[data-pk]'); if (!b) { if (e.target === ov) ov.remove(); return; }
       var k = b.dataset.pk;
       if (k === 'close') ov.remove();
       else if (k === 'cat') { cat = b.dataset.v; render(); }
+      else if (k === 'add' && onDone) { var picked = Object.keys(sel).map(function (id) { return lib.find(function (x) { return x.id === id; }); }).filter(Boolean); ov.remove(); onDone(picked); }
       else if (k === 'add') { Object.keys(sel).forEach(function (id) { var le = lib.find(function (x) { return x.id === id; }); if (le) container.insertAdjacentHTML('beforeend', exRow(libRowToEx(le))); }); ov.remove(); toastLite('Added. Adjust sets and reps, then tap Save.'); }
     });
     ov.addEventListener('change', function (e) { if (e.target.dataset.pk === 'sel') { if (e.target.checked) sel[e.target.value] = 1; else delete sel[e.target.value]; render(); } });
@@ -1006,6 +1009,21 @@
           S.sub = null; S.tab = 'library'; return toast('Imported ' + ins2.length + ' exercises' + (bad.length ? '. Skipped rows ' + bad.join(', ') + ' (missing name or section).' : '.'));
         }
         case 'pick': { var cont = t.closest('.ed').querySelector('[data-newex]'); if (!(D.library || []).length) return toastLite('Your library is empty. Add exercises in the Library tab first.'); openPicker(cont); return; }
+        case 'quickwo': {
+          if (!(D.library || []).length) return toastLite('Your library is empty. Add exercises in the Library tab first.');
+          openPicker(null, async function (picked) {
+            try {
+              if (!picked.length) return;
+              if (!D.detail.program) { D.detail.program = await q(sb.from('programs').insert({ client_id: D.detail.client.id, name: 'Your plan', weeks: 4, current_week: 1, active: true }).select().single()); D.detail.workouts = []; D.detail.exercises = {}; }
+              var n = D.detail.workouts.length, letter = String.fromCharCode(65 + (n % 26));
+              var qw = await q(sb.from('workouts').insert({ program_id: D.detail.program.id, client_id: D.detail.client.id, position: n, title: 'Workout ' + letter, focus: picked.map(function (e) { return e.category; }).filter(function (c, i, a) { return a.indexOf(c) === i; }).slice(0, 2).join(' + '), in_person: false }).select().single());
+              D.detail.workouts.push(qw);
+              D.detail.exercises[qw.id] = await q(sb.from('exercises').insert(picked.map(function (e, i) { return Object.assign(libRowToEx(e), { workout_id: qw.id, client_id: D.detail.client.id, position: i }); })).select());
+              toast('Workout ' + letter + ' is ready for ' + first(D.detail.client.full_name) + '.');
+            } catch (x) { fail(x); }
+          });
+          return;
+        }
         case 'newpt': S.sub = 'ptedit'; S.ptId = null; window.scrollTo(0, 0); return draw();
         case 'editpt': S.sub = 'ptedit'; S.ptId = d.id; window.scrollTo(0, 0); return draw();
         case 'addptrow': document.getElementById('ptrows').insertAdjacentHTML('beforeend', ptRow(null)); return;

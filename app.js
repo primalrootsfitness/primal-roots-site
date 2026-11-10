@@ -1,6 +1,6 @@
 (function(){
   var amts=document.querySelectorAll('.amt[data-base]');
-  function fmt(n){return '$'+Math.round(n)}
+  function fmt(n){return '$'+Math.round(n).toLocaleString('en-US')}
   function render(off){
     amts.forEach(function(el){
       var base=+el.dataset.base,price=Math.floor(base*(1-off/100)+1e-9),mo=el.hasAttribute('data-mo');

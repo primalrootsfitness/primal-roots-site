@@ -261,3 +261,7 @@ footer p{max-width:62ch}
 footer p.sms a{color:inherit;text-decoration:underline}
 .tiers.two{grid-template-columns:repeat(2,1fr);gap:16px;max-width:960px}
 @media (max-width:800px){.tiers.two{grid-template-columns:1fr}}
+.reasons.fit h3{font-size:22px;line-height:1.15}
+.reasons.fit{grid-template-columns:repeat(3,1fr)}
+@media (max-width:900px){.reasons.fit{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.reasons.fit{grid-template-columns:1fr}}

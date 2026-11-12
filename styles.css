@@ -279,3 +279,7 @@ footer p.sms a{color:inherit;text-decoration:underline}
 .combo .plus{font-family:'Bebas Neue',Impact,sans-serif;font-size:44px;color:var(--rust);line-height:1}
 @media (max-width:640px){.combo{grid-template-columns:1fr}.combo .plus{text-align:center}}
 .tier .sub.small{font-size:14px;margin:0}
+.founding{background:var(--rust);color:#fff}
+.founding .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;padding-block:12px}
+.founding p{margin:0;font-size:16px;line-height:1.4}
+.founding a{color:#fff;font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}

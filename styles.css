@@ -283,3 +283,5 @@ footer p.sms a{color:inherit;text-decoration:underline}
 .founding .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;padding-block:12px}
 .founding p{margin:0;font-size:16px;line-height:1.4}
 .founding a{color:#fff;font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.fitnote{margin:20px 0 0;font-size:17px}
+.fitnote a,.tier .sub a{color:var(--rust);font-weight:600;white-space:nowrap}

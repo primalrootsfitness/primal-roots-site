@@ -171,7 +171,7 @@
     var doneN = D.workouts.filter(function (x) { return isDone(x.id); }).length;
     var last = D.messages.slice(-1)[0];
     return '<div><p class="label">' + esc(fmtDay(NOW)) + '</p><h2>Good to see you, ' + esc(c.first_name || first(c.full_name)) + '.</h2></div>' +
-      (st.next ? '<div class="card dark"><p class="label">Next session with ' + COACH.name + '</p><h3>' + esc(fmtDay(st.next.starts_at)) + ' · ' + esc(fmtTime(st.next.starts_at)) + '</h3><p class="muted small">At my garage gym or your place. Bring water and shoes you can take off.</p></div>'
+      (st.next ? '<div class="card dark"><p class="label">Next session with ' + COACH.name + '</p><h3>' + esc(fmtDay(st.next.starts_at)) + ' · ' + esc(fmtTime(st.next.starts_at)) + '</h3><p class="muted small">Private garage gym, Bend. Bring water and shoes you can take off.</p></div>'
         : '<a class="card tap" href="' + COACH.bookingLink + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><p class="label">Next session</p><h3>Nothing booked yet</h3><p class="muted small">Tap to book a time with ' + COACH.name + '.</p></a>') +
       (w ? '<button class="card tap" data-go="workout" data-id="' + w.id + '"><div class="row"><p class="label">Today\'s training</p><span class="chip' + (w.in_person ? ' solid' : '') + '">' + (isDone(w.id) ? 'Done' : w.in_person ? 'In person' : 'On your own') + '</span></div><h3>' + esc(w.title) + '</h3><p class="muted small">' + (D.exercises[w.id] || []).length + ' exercises' + (w.minutes ? ' · about ' + w.minutes + ' min' : '') + '</p></button>'
         : '<div class="card"><p class="label">Training</p><p class="muted">' + COACH.name + ' is building your program. It will show up here.</p></div>') +
